@@ -8,20 +8,13 @@
 #ifndef OCTOTIGER_TREE_HPP_
 #define OCTOTIGER_TREE_HPP_
 
-#include <octotiger/conserved.hpp>
 #include <octotiger/fixed_real.hpp>
-#include <octotiger/primitive.hpp>
+#include <octotiger/full_state.hpp>
 #include <octotiger/super_array.hpp>
 
 #include <hpx/include/components.hpp>
 
-struct full_state {
-	conserved U;
-	primitive W;
-	gradient dW;
-	fixed_real t;
-	fixed_real dt;
-};
+
 
 class tree: public hpx::components::component_base<tree> {
 

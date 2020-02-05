@@ -7,6 +7,7 @@
 
 #include <octotiger/math.hpp>
 #include <octotiger/options.hpp>
+#include <octotiger/riemann.hpp>
 #include <octotiger/tree.hpp>
 
 HPX_REGISTER_COMPONENT(hpx::components::component<tree>, tree);
@@ -198,16 +199,23 @@ void tree::physical_bc_primitive() {
 
 void tree::update_con(fixed_real t, fixed_real dt) {
 	if (is_leaf()) {
+		primitive WR;
+		primitive WL;
 		for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 			for (int dim = 0; dim < NDIM; dim++) {
 				const auto &IR = I;
 				auto IL = I;
 				IL[dim]--;
-				const auto &R = (*state_ptr_)[IR];
-				const auto &L = (*state_ptr_)[IL];
+				auto &R = (*state_ptr_)[IR];
+				auto &L = (*state_ptr_)[IL];
 				if (L.t + L.dt == t + dt || R.t + R.dt == t + dt || global_time) {
-					const auto& WR = R.W - R.dW[dim] * 0.5;
-					const auto& WL = L.W + L.dW[dim] * 0.5;
+					const auto this_dt = real(global_time ? dt : min(L.dt, R.dt));
+					WR = R.W - (R.dW[dim] - R.dWdt() * this_dt) * 0.5;
+					WL = L.W + (L.dW[dim] + L.dWdt() * this_dt) * 0.5;
+					const auto F = riemann_solver(WL, WR, dim);
+					const auto dU = F * (this_dt / dx_);
+					R.U = R.U + dU;
+					L.U = L.U - dU;
 				}
 			}
 		}

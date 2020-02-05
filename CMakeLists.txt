@@ -23,7 +23,8 @@ find_package(Boost REQUIRED)
 
 set(octotiger2_source_files
 	src/conserved.cpp
-	src/main.cpp
+    src/full_state.cpp
+ 	src/main.cpp
 	src/options.cpp
 	src/primitive.cpp
     src/riemann.cpp
@@ -34,6 +35,7 @@ set(octotiger2_header_files
     octotiger/dim.hpp
     octotiger/conserved.hpp
     octotiger/fixed_real.hpp
+    octotiger/full_state.hpp
     octotiger/math.hpp
 	octotiger/options.hpp
 	octotiger/primitive.hpp
