@@ -156,3 +156,66 @@ fixed_real tree::timestep(fixed_real t) {
 	}
 	return dt;
 }
+
+void tree::physical_bc_primitive() {
+	if (is_leaf()) {
+		for (int dim = 0; dim < NDIM; dim++) {
+			if (space_volume_.begin(dim) == fixed_real(0.0)) {
+				volume<int> bc_vol = index_volume_;
+				bc_vol.begin(dim) = -1;
+				bc_vol.end(dim) = 0;
+				for (auto I = bc_vol.begin(); I != bc_vol.end(); bc_vol.inc_index((I))) {
+					auto Ip = I;
+					Ip[dim]++;
+					auto &W = (*state_ptr_)[I].W;
+					W = (*state_ptr_)[Ip].W;
+					W.v[dim] = min(W.v[dim], real(0.0));
+				}
+			}
+			if (space_volume_.end(dim) == fixed_real(1.0)) {
+				volume<int> bc_vol = index_volume_;
+				bc_vol.begin(dim) = 1 << level_;
+				bc_vol.end(dim) = (1 << level_) + 1;
+				for (auto I = bc_vol.begin(); I != bc_vol.end(); bc_vol.inc_index((I))) {
+					auto Im = I;
+					Im[dim]--;
+					(*state_ptr_)[I].W = (*state_ptr_)[Im].W;
+					auto &W = (*state_ptr_)[I].W;
+					W = (*state_ptr_)[Im].W;
+					W.v[dim] = max(W.v[dim], real(0.0));
+				}
+
+			}
+		}
+	} else {
+		std::array<hpx::future<void>, NCHILD> futs;
+		for (int ci = 0; ci < NCHILD; ci++) {
+			futs[ci] = hpx::async<physical_bc_primitive_action>(children_[ci]);
+		}
+		hpx::wait_all(futs.begin(), futs.end());
+	}
+}
+
+void tree::update_con(fixed_real t, fixed_real dt) {
+	if (is_leaf()) {
+		for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
+			for (int dim = 0; dim < NDIM; dim++) {
+				const auto &IR = I;
+				auto IL = I;
+				IL[dim]--;
+				const auto &R = (*state_ptr_)[IR];
+				const auto &L = (*state_ptr_)[IL];
+				if (L.t + L.dt == t + dt || R.t + R.dt == t + dt || global_time) {
+					const auto& WR = R.W - R.dW[dim] * 0.5;
+					const auto& WL = L.W + L.dW[dim] * 0.5;
+				}
+			}
+		}
+	} else {
+		std::array<hpx::future<void>, NCHILD> futs;
+		for (int ci = 0; ci < NCHILD; ci++) {
+			futs[ci] = hpx::async<update_con_action>(children_[ci], t, dt);
+		}
+	}
+
+}

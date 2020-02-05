@@ -20,6 +20,7 @@ struct primitive: public general_vect<real, NF> {
 	real &p;
 	general_vect<real, NDIM> &v;
 	primitive();
+	primitive& operator=(const general_vect<real, NF> &other);
 	primitive& operator=(const primitive &other);
 	conserved to_con() const;
 	real sound_speed() const;

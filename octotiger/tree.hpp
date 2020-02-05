@@ -68,6 +68,11 @@ public:
 	void gradients(fixed_real t);
 	HPX_DEFINE_COMPONENT_ACTION(tree, gradients);
 
+	void physical_bc_primitive();
+	HPX_DEFINE_COMPONENT_ACTION(tree,physical_bc_primitive);
+
+	void update_con(fixed_real, fixed_real);
+	HPX_DEFINE_COMPONENT_ACTION(tree, update_con);
 };
 
 #endif /* OCTOTIGER_TREE_HPP_ */

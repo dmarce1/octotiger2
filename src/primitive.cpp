@@ -8,9 +8,12 @@
 #include <octotiger/conserved.hpp>
 #include <octotiger/primitive.hpp>
 
-
-
 primitive& primitive::operator=(const primitive &other) {
+	general_vect<real, NF>::operator=(other);
+	return *this;
+}
+
+primitive& primitive::operator=(const general_vect<real, NF> &other) {
 	general_vect<real, NF>::operator=(other);
 	return *this;
 }
