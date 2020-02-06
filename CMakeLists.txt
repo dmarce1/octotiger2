@@ -28,6 +28,7 @@ set(octotiger2_source_files
 	src/options.cpp
 	src/primitive.cpp
     src/riemann.cpp
+    src/silo.cpp
 	src/tree.cpp
 )
 
@@ -41,6 +42,7 @@ set(octotiger2_header_files
 	octotiger/primitive.hpp
     octotiger/real.hpp
     octotiger/riemann.hpp
+    octotiger/silo.hpp
 	octotiger/super_array.hpp
 	octotiger/tree.hpp
     octotiger/vect.hpp

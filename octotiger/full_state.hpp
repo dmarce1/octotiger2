@@ -8,7 +8,6 @@
 #ifndef OCTOTIGER_FULL_STATE_HPP_
 #define OCTOTIGER_FULL_STATE_HPP_
 
-
 #include <octotiger/conserved.hpp>
 #include <octotiger/fixed_real.hpp>
 #include <octotiger/primitive.hpp>
@@ -20,6 +19,14 @@ struct full_state {
 	fixed_real t;
 	fixed_real dt;
 	primitive dWdt() const;
+	template<class A>
+	void serialize(A &a, unsigned) {
+		a & U;
+		a & W;
+		a & dW;
+		a & t;
+		a & dt;
+	}
 };
 
 #endif /* OCTOTIGER_FULL_STATE_HPP_ */
