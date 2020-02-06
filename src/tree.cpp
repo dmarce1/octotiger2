@@ -92,9 +92,9 @@ void tree::con_to_prim(fixed_real t, fixed_real dt) {
 				primitive &W = (*state_ptr_)[I].W;
 				const conserved &U = (*state_ptr_)[I].U;
 				W = U.to_prim();
-				t_ += dt_;
 				(*state_ptr_)[I].t = t_;
 			}
+			t_ += dt_;
 		}
 	} else {
 		std::array<hpx::future<void>, NCHILD> futs;
@@ -153,10 +153,10 @@ fixed_real tree::timestep(fixed_real t) {
 			futs[ci] = hpx::async<timestep_action>(children_[ci], t);
 		}
 		for (int ci = 0; ci < NCHILD; ci++) {
-			dt = min(dt, futs[ci].get());
+			dt_ = min(dt_, futs[ci].get());
 		}
 	}
-	return dt;
+	return dt_;
 }
 
 void tree::physical_bc_primitive() {
