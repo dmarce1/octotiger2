@@ -129,9 +129,24 @@ public:
 		return end_;
 	}
 
-	volume<T> expand(const T& d) {
+	bool contains(const general_vect<T, NDIM> &pt) {
+		bool rc = true;
+		for (int dim = 0; dim < NDIM; dim++) {
+			if (pt[dim] < begin_[dim]) {
+				rc = false;
+				break;
+			}
+			if (pt[dim] >= end_[dim]) {
+				rc = false;
+				break;
+			}
+		}
+		return rc;
+	}
+
+	volume<T> expand(const T &d) {
 		volume<T> v;
-		for( int dim = 0; dim < NDIM; dim++) {
+		for (int dim = 0; dim < NDIM; dim++) {
 			v.begin(dim) = begin(dim) - d;
 			v.end(dim) = end(dim) + d;
 		}

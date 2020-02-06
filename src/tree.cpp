@@ -132,18 +132,19 @@ void tree::gradients(fixed_real t) {
 }
 
 fixed_real tree::timestep(fixed_real t) {
-	fixed_real dt = fixed_real::max();
+	dt_ = fixed_real::max();
 	if (is_leaf()) {
 		if (t == t_) {
 			for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 				primitive W = (*state_ptr_)[I].W;
 				const auto vsig = W.signal_speed();
-				dt_ = fixed_real(dx_ / vsig) * cfl;
-				dt_ = dt_.nearest_log2();
-				dt_ = min(dt_, dt_.next_bin() - t);
-				dt = min(dt_, dt);
+				fixed_real dt = fixed_real(dx_ / vsig) * cfl;
+				dt = dt.nearest_log2();
+				dt = min(dt, dt.next_bin() - t);
+				dt_ = min(dt_, dt);
+			}
+			for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 				(*state_ptr_)[I].dt = dt_;
-
 			}
 		}
 	} else {
@@ -180,7 +181,6 @@ void tree::physical_bc_primitive() {
 				for (auto I = bc_vol.begin(); I != bc_vol.end(); bc_vol.inc_index((I))) {
 					auto Im = I;
 					Im[dim]--;
-					(*state_ptr_)[I].W = (*state_ptr_)[Im].W;
 					auto &W = (*state_ptr_)[I].W;
 					W = (*state_ptr_)[Im].W;
 					W.v[dim] = max(W.v[dim], real(0.0));
@@ -197,11 +197,52 @@ void tree::physical_bc_primitive() {
 	}
 }
 
+void tree::physical_bc_gradient() {
+	if (is_leaf()) {
+		for (int dim = 0; dim < NDIM; dim++) {
+			if (space_volume_.begin(dim) == fixed_real(0.0)) {
+				volume<int> bc_vol = index_volume_;
+				bc_vol.begin(dim) = -1;
+				bc_vol.end(dim) = 0;
+				for (auto I = bc_vol.begin(); I != bc_vol.end(); bc_vol.inc_index((I))) {
+					auto Ip = I;
+					Ip[dim]++;
+					auto &dW = (*state_ptr_)[I].dW;
+					dW = (*state_ptr_)[Ip].dW;
+					dW[dim] = general_vect<real, NF>(0);
+				}
+			}
+			if (space_volume_.end(dim) == fixed_real(1.0)) {
+				volume<int> bc_vol = index_volume_;
+				bc_vol.begin(dim) = 1 << level_;
+				bc_vol.end(dim) = (1 << level_) + 1;
+				for (auto I = bc_vol.begin(); I != bc_vol.end(); bc_vol.inc_index((I))) {
+					auto Im = I;
+					Im[dim]--;
+					auto &dW = (*state_ptr_)[I].dW;
+					dW = (*state_ptr_)[Im].dW;
+					dW[dim] = general_vect<real, NF>(0);
+				}
+
+			}
+		}
+	} else {
+		std::array<hpx::future<void>, NCHILD> futs;
+		for (int ci = 0; ci < NCHILD; ci++) {
+			futs[ci] = hpx::async<physical_bc_gradient_action>(children_[ci]);
+		}
+		hpx::wait_all(futs.begin(), futs.end());
+	}
+}
+
 void tree::update_con(fixed_real t, fixed_real dt) {
 	if (is_leaf()) {
 		primitive WR;
 		primitive WL;
-		for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
+		auto flux_volume = index_volume_;
+		for (int dim = 0; dim < NDIM; dim++) {
+			flux_volume.end(dim)++;}
+		for (auto I = flux_volume.begin(); I != flux_volume.end(); flux_volume.inc_index(I)) {
 			for (int dim = 0; dim < NDIM; dim++) {
 				const auto &IR = I;
 				auto IL = I;
@@ -214,8 +255,12 @@ void tree::update_con(fixed_real t, fixed_real dt) {
 					WL = L.W + (L.dW[dim] + L.dWdt() * this_dt) * 0.5;
 					const auto F = riemann_solver(WL, WR, dim);
 					const auto dU = F * (this_dt / dx_);
-					R.U = R.U + dU;
-					L.U = L.U - dU;
+					if (index_volume_.contains(IR)) {
+						R.U = R.U + dU;
+					}
+					if (index_volume_.contains(IL)) {
+						L.U = L.U - dU;
+					}
 				}
 			}
 		}

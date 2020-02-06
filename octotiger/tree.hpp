@@ -64,6 +64,9 @@ public:
 	void physical_bc_primitive();
 	HPX_DEFINE_COMPONENT_ACTION(tree,physical_bc_primitive);
 
+	void physical_bc_gradient();
+	HPX_DEFINE_COMPONENT_ACTION(tree,physical_bc_gradient);
+
 	void update_con(fixed_real, fixed_real);
 	HPX_DEFINE_COMPONENT_ACTION(tree, update_con);
 };
