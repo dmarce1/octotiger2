@@ -9,6 +9,7 @@ public:
 	double grid_size;
 	std::string config_file;
 	std::string problem;
+	std::string refinement;
 
 	template<class Arc>
 	void serialize(Arc &arc, unsigned) {
@@ -18,6 +19,7 @@ public:
 		arc & grid_size;
 		arc & config_file;
 		arc & problem;
+		arc & refinement;
 	}
 	static options global;
 	static options& get();

@@ -9,7 +9,13 @@
 #define OCTOTIGER_REFINEMENTS_HPP_
 
 
+#include <octotiger/full_state.hpp>
 
+#include <functional>
+
+using refinement_func = std::function<bool(const full_state&)>;
+
+refinement_func  get_refinement_function();
 
 
 #endif /* OCTOTIGER_REFINEMENTS_HPP_ */

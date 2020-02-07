@@ -34,7 +34,8 @@ bool options::process_options(int argc, char *argv[]) {
 	("global_time", po::value<bool>(&global_time)->default_value(false), "enable global time-stepping") //
 	("grid_size", po::value<double>(&grid_size)->default_value(1.0), "size of grid") //
 	("help", "produce help message") //
-	("problem", po::value<std::string>(&problem)->default_value(""), "problem") //
+	("problem", po::value<std::string>(&problem)->default_value("sod"), "problem - sod") //
+	("refinement", po::value<std::string>(&refinement)->default_value("den"), "refinement type - den") //
 			;
 
 	boost::program_options::variables_map vm;
@@ -63,5 +64,6 @@ bool options::process_options(int argc, char *argv[]) {
 	SHOW(global_time);
 	SHOW(grid_size);
 	SHOW_STRING(problem);
+	SHOW_STRING(refinement);
 	return true;
 }

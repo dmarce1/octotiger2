@@ -5,6 +5,10 @@
  *      Author: dmarce1
  */
 
+#include <octotiger/refinements.hpp>
 
 
 
+refinement_func  get_refinement_function() {
+
+}
