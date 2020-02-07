@@ -1,4 +1,3 @@
-
 #include <octotiger/options.hpp>
 
 #include <hpx/runtime/actions/plain_action.hpp>
@@ -29,12 +28,13 @@ bool options::process_options(int argc, char *argv[]) {
 	po::options_description command_opts("options");
 
 	command_opts.add_options() //
-	("help", "produce help message") //
-	("config_file", po::value < std::string > (&config_file)->default_value(""), "configuration file") //
+	("cfl", po::value<double>(&cfl)->default_value(0.4), "CFL factor") //
+	("config_file", po::value<std::string>(&config_file)->default_value(""), "configuration file") //
 	("fgamma", po::value<double>(&fgamma)->default_value(7.0 / 5.0), "gamma for fluid gamma law") //
 	("global_time", po::value<bool>(&global_time)->default_value(false), "enable global time-stepping") //
-	("cfl", po::value<double>(&cfl)->default_value(0.4), "CFL factor") //
 	("grid_size", po::value<double>(&grid_size)->default_value(1.0), "size of grid") //
+	("help", "produce help message") //
+	("problem", po::value<std::string>(&problem)->default_value(""), "problem") //
 			;
 
 	boost::program_options::variables_map vm;
@@ -56,9 +56,12 @@ bool options::process_options(int argc, char *argv[]) {
 	po::notify(vm);
 
 #define SHOW( opt ) std::cout << std::string( #opt ) << " = " << std::to_string(opt) << '\n';
+#define SHOW_STRING( opt ) std::cout << std::string( #opt ) << " = " << opt << '\n';
 	SHOW(cfl);
+	SHOW_STRING(config_file);
 	SHOW(fgamma);
 	SHOW(global_time);
 	SHOW(grid_size);
+	SHOW_STRING(problem);
 	return true;
 }

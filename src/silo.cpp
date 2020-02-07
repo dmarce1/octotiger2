@@ -59,8 +59,14 @@ void silo_add_zones(const std::vector<silo_zone> &zones) {
 
 }
 
-void silo_end(const std::string &fname) {
+void silo_end(const std::string &fname, fixed_real t) {
 	DBfile *db = DBCreateReal(fname.c_str(), DB_CLOBBER, DB_LOCAL, "Octo-Tiger II", DB_HDF5);
+
+	auto optlist = DBMakeOptlist(2);
+	float ftime = (float) (double) t;
+	double dtime = t;
+	DBAddOption(optlist, DBOPT_TIME, &ftime);
+	DBAddOption(optlist, DBOPT_DTIME, &dtime);
 
 	const int nnodes = node_map_.size();
 	const int nzones = zone_map_.size();
@@ -114,12 +120,35 @@ void silo_end(const std::string &fname) {
 #error
 #endif
 	}
-	DBPutZonelist2(db, "zonelist", nzones, NDIM, zones.data(), zones.size(), 0, 0, 0, shapetypes, shapesize, shapecount, 1, NULL);
-	DBPutUcdmesh(db, "mesh", NDIM, coordnames, coords, nnodes, nzones, "zonelist", NULL, DB_DOUBLE, NULL);
-
-
-
-
+	DBPutZonelist2(db, "zonelist", nzones, NDIM, zones.data(), zones.size(), 0, 0, 0, shapetypes, shapesize, shapecount, 1, optlist);
+	DBPutUcdmesh(db, "mesh", NDIM, coordnames, coords, nnodes, nzones, "zonelist", NULL, DB_DOUBLE, optlist);
+	const char *prim_names[] = { "rho", "p", "vx", "vy", "vz" };
+	const char *con_names[] = { "D", "E", "Px", "Py", "Pz" };
+	std::vector<double> data;
+	for (int f = 0; f < NF; f++) {
+		data.clear();
+		for (const auto &z : zone_map_) {
+			data.push_back(z.first.W[f].get());
+		}
+		DBPutUcdvar1(db, prim_names[f], "mesh", data.data(), nzones, NULL, 0, DB_DOUBLE, DB_ZONECENT, optlist);
+	}
+	for (int f = 0; f < NF; f++) {
+		data.clear();
+		for (const auto &z : zone_map_) {
+			data.push_back(z.first.U[f].get());
+		}
+		DBPutUcdvar1(db, con_names[f], "mesh", data.data(), nzones, NULL, 0, DB_DOUBLE, DB_ZONECENT, optlist);
+	}
+	data.clear();
+	for (const auto &z : zone_map_) {
+		data.push_back(z.first.t);
+	}
+	DBPutUcdvar1(db, "t", "mesh", data.data(), nzones, NULL, 0, DB_DOUBLE, DB_ZONECENT, optlist);
+	data.clear();
+	for (const auto &z : zone_map_) {
+		data.push_back(z.first.dt);
+	}
+	DBPutUcdvar1(db, "dt", "mesh", data.data(), nzones, NULL, 0, DB_DOUBLE, DB_ZONECENT, optlist);
 
 	for (int dim = 0; dim < NDIM; dim++) {
 		delete[] coordnames[dim];
@@ -128,5 +157,6 @@ void silo_end(const std::string &fname) {
 	for (int dim = 0; dim < NDIM; dim++) {
 		delete[] coords[dim];
 	}
+	DBFreeOptlist(optlist);
 	DBClose(db);
 }

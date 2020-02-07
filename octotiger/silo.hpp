@@ -30,7 +30,7 @@ struct silo_zone {
 
 
 void silo_begin();
-void silo_end(const std::string&);
+void silo_end(const std::string&, fixed_real);
 void silo_add_zones(const std::vector<silo_zone>&);
 
 HPX_DEFINE_PLAIN_ACTION(silo_add_zones);

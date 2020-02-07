@@ -27,6 +27,7 @@ set(octotiger2_source_files
  	src/main.cpp
 	src/options.cpp
 	src/primitive.cpp
+    src/problems.cpp
     src/riemann.cpp
     src/silo.cpp
 	src/tree.cpp
@@ -40,6 +41,7 @@ set(octotiger2_header_files
     octotiger/math.hpp
 	octotiger/options.hpp
 	octotiger/primitive.hpp
+	octotiger/problems.hpp
     octotiger/real.hpp
     octotiger/riemann.hpp
     octotiger/silo.hpp
