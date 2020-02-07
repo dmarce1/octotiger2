@@ -14,8 +14,6 @@
 
 #include <hpx/include/components.hpp>
 
-
-
 class tree: public hpx::components::component_base<tree> {
 
 	static int inx;
@@ -37,7 +35,6 @@ class tree: public hpx::components::component_base<tree> {
 
 	void initialize();
 
-
 public:
 
 	tree() = default;
@@ -51,10 +48,10 @@ public:
 		return (fixed_real(I[dim]) + fixed_real(0.5)) * dx_;
 	}
 
-	inline general_vect<fixed_real,NDIM> X(const index_type &I) {
-		general_vect<fixed_real,NDIM> x;
+	inline vect X(const index_type &I) {
+		vect x;
 		for (int dim = 0; dim < NDIM; dim++) {
-			x[dim] = X(I,dim);
+			x[dim] = double(X(I, dim));
 		}
 		return x;
 	}
@@ -64,6 +61,13 @@ public:
 	void create_children();
 
 	static void static_init();
+
+	std::vector<real> get_prolong_con();
+	void set_con(const std::vector<real>&);
+	HPX_DEFINE_COMPONENT_ACTION(tree, set_con);
+
+	void set_initial_conditions();
+	HPX_DEFINE_COMPONENT_ACTION(tree, set_initial_conditions);
 
 	fixed_real timestep(fixed_real);
 	HPX_DEFINE_COMPONENT_ACTION(tree,timestep);

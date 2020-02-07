@@ -6,7 +6,7 @@
  */
 
 #include <octotiger/math.hpp>
-#include <octotiger/options.hpp>
+#include <octotiger/problems.hpp>
 #include <octotiger/riemann.hpp>
 #include <octotiger/silo.hpp>
 #include <octotiger/tree.hpp>
@@ -270,6 +270,40 @@ void tree::update_con(fixed_real t, fixed_real dt) {
 		for (int ci = 0; ci < NCHILD; ci++) {
 			futs[ci] = hpx::async<update_con_action>(children_[ci], t, dt);
 		}
+	}
+}
+
+
+std::vector<real> tree::get_prolong_con() {
+	std::vector<real> data;
+	for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
+		const auto& U = (*state_ptr_)[I].U;
+		for( int f = 0; f < NF; f++) {
+			data.push_back(U[f]);
+		}
+	}
+	return data;
+}
+
+
+void tree::set_con(const std::vector<real>& data) {
+	int i = 0;
+	for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
+		auto& U = (*state_ptr_)[I].U;
+		for( int f = 0; f < NF; f++) {
+			U[f] = data[i++];
+		}
+	}
+}
+
+
+
+void tree::set_initial_conditions() {
+	const auto f = get_init_func();
+	for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
+		(*state_ptr_)[I].U = f(X(I));
+		(*state_ptr_)[I].t = 0;
+		(*state_ptr_)[I].dt = 0;
 	}
 }
 

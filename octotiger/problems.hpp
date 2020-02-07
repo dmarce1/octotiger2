@@ -9,7 +9,13 @@
 #define OCTOTIGER_PROBLEMS_HPP_
 
 
+#include <octotiger/conserved.hpp>
 
+#include <functional>
+
+using init_func = std::function<conserved(const vect&)>;
+
+init_func get_init_func();
 
 
 #endif /* OCTOTIGER_PROBLEMS_HPP_ */
