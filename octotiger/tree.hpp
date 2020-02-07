@@ -27,7 +27,7 @@ class tree: public hpx::components::component_base<tree> {
 	volume<int> index_volume_;
 	volume<fixed_real> space_volume_;
 	int level_;
-	real dx_;
+	fixed_real dx_;
 	fixed_real t_;
 	fixed_real dt_;
 
@@ -37,6 +37,7 @@ class tree: public hpx::components::component_base<tree> {
 
 	void initialize();
 
+
 public:
 
 	tree() = default;
@@ -44,6 +45,18 @@ public:
 
 	inline bool is_leaf() const {
 		return children_.empty();
+	}
+
+	inline fixed_real X(const index_type &I, int dim) {
+		return (fixed_real(I[dim]) + fixed_real(0.5)) * dx_;
+	}
+
+	inline general_vect<fixed_real,NDIM> X(const index_type &I) {
+		general_vect<fixed_real,NDIM> x;
+		for (int dim = 0; dim < NDIM; dim++) {
+			x[dim] = X(I,dim);
+		}
+		return x;
 	}
 
 	void set_as_root();
@@ -69,6 +82,9 @@ public:
 
 	void update_con(fixed_real, fixed_real);
 	HPX_DEFINE_COMPONENT_ACTION(tree, update_con);
+
+	void send_silo();
+	HPX_DEFINE_COMPONENT_ACTION(tree, send_silo);
 };
 
 #endif /* OCTOTIGER_TREE_HPP_ */

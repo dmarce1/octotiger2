@@ -8,6 +8,7 @@
 #include <octotiger/math.hpp>
 #include <octotiger/options.hpp>
 #include <octotiger/riemann.hpp>
+#include <octotiger/silo.hpp>
 #include <octotiger/tree.hpp>
 
 HPX_REGISTER_COMPONENT(hpx::components::component<tree>, tree);
@@ -138,7 +139,7 @@ fixed_real tree::timestep(fixed_real t) {
 			for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 				primitive W = (*state_ptr_)[I].W;
 				const auto vsig = W.signal_speed();
-				fixed_real dt = fixed_real(dx_ / vsig) * cfl;
+				fixed_real dt = fixed_real(real(dx_) / vsig) * cfl;
 				dt = dt.nearest_log2();
 				dt = min(dt, dt.next_bin() - t);
 				dt_ = min(dt_, dt);
@@ -254,7 +255,7 @@ void tree::update_con(fixed_real t, fixed_real dt) {
 					WR = R.W - (R.dW[dim] - R.dWdt() * this_dt) * 0.5;
 					WL = L.W + (L.dW[dim] + L.dWdt() * this_dt) * 0.5;
 					const auto F = riemann_solver(WL, WR, dim);
-					const auto dU = F * (this_dt / dx_);
+					const auto dU = F * (this_dt / real(dx_));
 					if (index_volume_.contains(IR)) {
 						R.U = R.U + dU;
 					}
@@ -270,5 +271,33 @@ void tree::update_con(fixed_real t, fixed_real dt) {
 			futs[ci] = hpx::async<update_con_action>(children_[ci], t, dt);
 		}
 	}
-
 }
+
+void tree::send_silo() {
+	static const auto root_loc = hpx::find_all_localities()[0];
+	if (is_leaf()) {
+		std::vector<silo_zone> zones;
+		for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
+			silo_zone z;
+			z.state = (*state_ptr_)[I];
+			for (int ci = 0; ci < NCHILD; ci++) {
+				for (int dim = 0; dim < NDIM; dim++) {
+					if ((ci >> dim) & 1 == 0) {
+						z.nodes[ci][dim] = X(I, dim) - fixed_real(0.5) * dx_;
+					} else {
+						z.nodes[ci][dim] = X(I, dim) + fixed_real(0.5) * dx_;
+					}
+				}
+			}
+			zones.push_back(z);
+		}
+		silo_add_zones_action()(root_loc, std::move(zones));
+	} else {
+		std::array<hpx::future<void>, NCHILD> futs;
+		for (int ci = 0; ci < NCHILD; ci++) {
+			futs[ci] = hpx::async<send_silo_action>(children_[ci]);
+		}
+		hpx::wait_all(futs.begin(), futs.end());
+	}
+}
+

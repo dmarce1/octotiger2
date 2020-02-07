@@ -29,11 +29,11 @@ struct silo_zone {
 };
 
 
-void silo_reset();
+void silo_begin();
+void silo_end(const std::string&);
 void silo_add_zones(const std::vector<silo_zone>&);
 
-HPX_DECLARE_PLAIN_ACTION(silo_reset);
-HPX_DECLARE_PLAIN_ACTION(silo_add_zones);
+HPX_DEFINE_PLAIN_ACTION(silo_add_zones);
 
 
 #endif /* OCTOTIGER_SILO_HPP_ */
