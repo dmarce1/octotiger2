@@ -14,6 +14,19 @@
 
 #include <hpx/include/components.hpp>
 
+struct node_attr {
+	bool leaf;
+	volume<fixed_real> space_volume;
+	hpx::id_type locality;
+	template<class A>
+	void serialize(A &arc, unsigned) {
+		arc & leaf;
+		arc & space_volume;
+		arc & locality;
+	}
+
+};
+
 class tree: public hpx::components::component_base<tree> {
 
 	static int inx;
@@ -31,7 +44,11 @@ class tree: public hpx::components::component_base<tree> {
 
 	std::shared_ptr<super_array<full_state>> state_ptr_;
 
+	hpx::id_type parent_;
+	hpx::id_type self_;
 	std::vector<hpx::id_type> children_;
+	std::vector<hpx::id_type> neighbors_;
+	std::vector<node_attr> neighbor_attr_;
 
 	void initialize();
 
@@ -57,6 +74,7 @@ public:
 	}
 
 	void set_as_root();
+	HPX_DEFINE_COMPONENT_ACTION(tree, set_as_root);
 
 	void create_children();
 
@@ -89,6 +107,16 @@ public:
 
 	void send_silo();
 	HPX_DEFINE_COMPONENT_ACTION(tree, send_silo);
+
+	node_attr get_node_attributes() const;
+	HPX_DEFINE_COMPONENT_ACTION(tree, get_node_attributes);
+
+	void find_family(hpx::id_type, hpx::id_type, std::vector<hpx::id_type>);
+	HPX_DEFINE_COMPONENT_ACTION(tree,find_family);
+
+	std::vector<hpx::id_type> get_children() const;
+	HPX_DEFINE_COMPONENT_ACTION(tree, get_children);
+
 };
 
 #endif /* OCTOTIGER_TREE_HPP_ */

@@ -59,6 +59,59 @@ void tree::set_as_root() {
 
 }
 
+node_attr tree::get_node_attributes() const {
+	node_attr a;
+	a.leaf = is_leaf();
+	a.space_volume = space_volume_;
+	a.locality = hpx::find_here();
+	return a;
+}
+
+void tree::find_family(hpx::id_type parent, hpx::id_type self, std::vector<hpx::id_type> pot_neighbors) {
+	parent_ = parent;
+	self_ = self;
+	neighbors_ = std::move(pot_neighbors);
+	std::vector<hpx::future<node_attr>> nfuts(neighbors_.size());
+	for (std::size_t i = 0; i < neighbors_.size(); i++) {
+		nfuts[i] = hpx::async<get_node_attributes_action>(neighbors_[i]);
+	}
+	for (std::size_t i = 0; i < neighbors_.size(); i++) {
+		neighbor_attr_[i] = nfuts[i].get();
+	}
+	int i = 0;
+	while (i < neighbors_.size()) {
+		if (!space_volume_.intersects(neighbor_attr_[i].space_volume) && (neighbor_attr_[i].space_volume != space_volume_)) {
+			const auto sz = neighbors_.size() - 1;
+			neighbors_[i] = neighbors_[sz];
+			neighbor_attr_[i] = neighbor_attr_[sz];
+			neighbors_.resize(sz);
+			neighbor_attr_.resize(sz);
+		} else {
+			i++;
+		}
+	}
+	if (!is_leaf()) {
+		pot_neighbors = children_;
+		std::vector<hpx::future<std::vector<hpx::id_type>>> cfuts(neighbors_.size());
+		for (std::size_t i = 0; i < neighbors_.size(); i++) {
+			cfuts[i] = hpx::async<get_children_action>(neighbors_[i]);
+		}
+		for (std::size_t i = 0; i < neighbors_.size(); i++) {
+			auto tmp = cfuts[i].get();
+			pot_neighbors.insert(tmp.begin(), tmp.end(), pot_neighbors.end());
+		}
+		std::array<hpx::future<void>, NCHILD> futs;
+		for (int ci = 0; ci < NCHILD; ci++) {
+			futs[ci] = hpx::async<find_family_action>(children_[ci], self_, children_[ci], pot_neighbors);
+		}
+		hpx::wait_all(futs.begin(), futs.end());
+	}
+}
+
+std::vector<hpx::id_type> tree::get_children() const {
+	return children_;
+}
+
 void tree::create_children() {
 	assert(children_.empty());
 	std::array<hpx::future<hpx::id_type>, NCHILD> futs;
@@ -273,30 +326,26 @@ void tree::update_con(fixed_real t, fixed_real dt) {
 	}
 }
 
-
 std::vector<real> tree::get_prolong_con() {
 	std::vector<real> data;
 	for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
-		const auto& U = (*state_ptr_)[I].U;
-		for( int f = 0; f < NF; f++) {
+		const auto &U = (*state_ptr_)[I].U;
+		for (int f = 0; f < NF; f++) {
 			data.push_back(U[f]);
 		}
 	}
 	return data;
 }
 
-
-void tree::set_con(const std::vector<real>& data) {
+void tree::set_con(const std::vector<real> &data) {
 	int i = 0;
 	for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
-		auto& U = (*state_ptr_)[I].U;
-		for( int f = 0; f < NF; f++) {
+		auto &U = (*state_ptr_)[I].U;
+		for (int f = 0; f < NF; f++) {
 			U[f] = data[i++];
 		}
 	}
 }
-
-
 
 void tree::set_initial_conditions() {
 	const auto f = get_init_func();
@@ -324,6 +373,7 @@ void tree::send_silo() {
 				}
 			}
 			zones.push_back(z);
+			printf( "!!!!\n");
 		}
 		silo_add_zones_action()(root_loc, std::move(zones));
 	} else {

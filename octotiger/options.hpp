@@ -6,7 +6,7 @@ public:
 	bool global_time;
 	double cfl;
 	double fgamma;
-	double grid_size;
+	int grid_size;
 	std::string config_file;
 	std::string problem;
 	std::string refinement;

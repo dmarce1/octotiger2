@@ -166,7 +166,7 @@ public:
 		int dim = 0;
 		while (++I[dim] == end(dim)) {
 			if (dim != NDIM - 1) {
-				I[dim] = 0;
+				I[dim] = begin(dim);
 			} else {
 				I = end();
 			}
@@ -197,6 +197,30 @@ public:
 			s[dim] = s[dim + 1] * (begin(dim + 1) - end(dim + 1));
 		}
 		return s;
+	}
+
+	bool intersects(const volume<T> &other) {
+		bool rc = true;
+		for (int dim = 0; dim < NDIM; dim++) {
+			if (end(dim) < other.begin(dim)) {
+				rc = false;
+				break;
+			}
+		}
+		return rc;
+	}
+
+	volume<T> intersection(const volume<T> &other) {
+		volume<T> I;
+		for (int dim = 0; dim < NDIM; dim++) {
+			I.begin(dim) = max(begin(dim), other.begin(dim));
+			I.end(dim) = min(end(dim), other.end(dim));
+			if (I.begin(dim) > I.end(dim)) {
+				I = volume<T>();
+				break;
+			}
+		}
+		return I;
 	}
 
 };
