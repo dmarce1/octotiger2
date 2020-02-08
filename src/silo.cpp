@@ -18,7 +18,7 @@ struct node_hash {
 	std::size_t operator()(const node_type &n) const {
 		std::size_t key = 0;
 		for (int dim = 0; dim < NDIM; dim++) {
-			key ^= n[dim].get_int();
+			key ^= std::hash<std::uint64_t>()(n[dim].get_int());
 		}
 		return key;
 	}
@@ -95,7 +95,7 @@ void silo_end(const std::string &fname, fixed_real t) {
 #else
 #error
 #endif
-	const int shapesize[1] = { NDIM + 1 };
+	const int shapesize[1] = { 1 << NDIM };
 	const int shapecount[1] = { nzones };
 
 	for (const auto &z : zone_map_) {

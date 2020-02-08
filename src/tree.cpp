@@ -119,7 +119,7 @@ void tree::create_children() {
 	for (int ci = 0; ci < NCHILD; ci++) {
 		volume<int> this_vol;
 		for (int dim = 0; dim < NDIM; dim++) {
-			if ((ci >> dim) & 1 == 0) {
+			if (((ci >> dim) & 1) == 0) {
 				this_vol.begin(dim) = 2 * index_volume_.begin(dim);
 				this_vol.end(dim) = index_volume_.begin(dim) + index_volume_.end(dim);
 			} else {
@@ -365,7 +365,7 @@ void tree::send_silo() {
 			z.state = (*state_ptr_)[I];
 			for (int ci = 0; ci < NCHILD; ci++) {
 				for (int dim = 0; dim < NDIM; dim++) {
-					if ((ci >> dim) & 1 == 0) {
+					if (((ci >> dim) & 1) == 0) {
 						z.nodes[ci][dim] = X(I, dim) - fixed_real(0.5) * dx_;
 					} else {
 						z.nodes[ci][dim] = X(I, dim) + fixed_real(0.5) * dx_;
@@ -373,7 +373,6 @@ void tree::send_silo() {
 				}
 			}
 			zones.push_back(z);
-			printf( "!!!!\n");
 		}
 		silo_add_zones_action()(root_loc, std::move(zones));
 	} else {
