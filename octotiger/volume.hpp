@@ -169,6 +169,7 @@ public:
 				I[dim] = begin(dim);
 			} else {
 				I = end();
+				break;
 			}
 			dim++;
 		}
