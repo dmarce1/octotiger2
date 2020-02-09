@@ -188,15 +188,15 @@ void tree::gradients(fixed_real t) {
 fixed_real tree::timestep(fixed_real t) {
 	dt_ = fixed_real::max();
 	if (is_leaf()) {
-		if (t == t_) {
+		if (t == t_ || global_time) {
 			for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 				primitive W = (*state_ptr_)[I].W;
 				const auto vsig = W.signal_speed();
 				fixed_real dt = fixed_real(real(dx_) / vsig) * cfl;
-				dt = dt.nearest_log2();
-				dt = min(dt, dt.next_bin() - t);
 				dt_ = min(dt_, dt);
 			}
+			dt_ = dt_.nearest_log2();
+			dt_ = min(dt_, t.next_bin() - t);
 			for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 				(*state_ptr_)[I].dt = dt_;
 			}
