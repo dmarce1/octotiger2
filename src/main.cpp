@@ -41,8 +41,10 @@ int hpx_main(int argc, char *argv[]) {
 		step++;
 		tree::physical_bc_primitive_action()(root);
 		tree::gradients_action()(root, t);
-		const int oi = (double) t / opts.output_freq;
-		const int last_oi = (double) (t - dt) / opts.output_freq;
+		const double t0 = t;
+		const double dt0 = dt;
+		const std::int64_t oi = t0 / opts.output_freq;
+		const std::int64_t last_oi = (t0 - dt0) / opts.output_freq;
 		if (oi != last_oi) {
 			std::string name = "X." + std::to_string(++oiter) + ".silo";
 			silo_begin();
