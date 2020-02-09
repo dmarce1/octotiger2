@@ -1,13 +1,19 @@
-
 #include <octotiger/silo.hpp>
 #include <octotiger/tree.hpp>
 
 #include <hpx/hpx_init.hpp>
 
+#include <fenv.h>
+
 int hpx_main(int argc, char *argv[]) {
+    feenableexcept(FE_DIVBYZERO);
+    feenableexcept(FE_INVALID);
+    feenableexcept(FE_OVERFLOW);
+
+
 	options opts;
 
-	opts.process_options(argc,argv);
+	opts.process_options(argc, argv);
 
 	tree::static_init();
 
@@ -17,11 +23,33 @@ int hpx_main(int argc, char *argv[]) {
 	tree::con_to_prim_action()(root, 0.0, 0.0);
 	tree::physical_bc_primitive_action()(root);
 	tree::gradients_action()(root, 0.0);
-	tree::physical_bc_gradient_action()(root);
 	silo_begin();
 	tree::send_silo_action()(root);
-	silo_end( "X.0.silo", 0.0);
+	silo_end("X.0.silo", 0.0);
 
+	fixed_real t = 0.0;
+	int step = 0;
+	int oiter = 0;
+	printf( "Starting main execution loop...\n");
+	while (t < fixed_real(opts.tmax)) {
+		fixed_real dt = tree::timestep_action()(root, t);
+		printf("%i %e %e\n", step, (double) t, (double) dt);
+		tree::physical_bc_gradient_action()(root);
+		tree::update_con_action()(root, t, dt);
+		tree::con_to_prim_action()(root, t, dt);
+		t += dt;
+		step++;
+		tree::physical_bc_primitive_action()(root);
+		tree::gradients_action()(root, t);
+		const int oi = (double) t / opts.output_freq;
+		const int last_oi = (double) (t - dt) / opts.output_freq;
+		if (oi != last_oi) {
+			std::string name = "X." + std::to_string(++oiter) + ".silo";
+			silo_begin();
+			tree::send_silo_action()(root);
+			silo_end(name, t);
+		}
+	}
 
 	return hpx::finalize();
 }

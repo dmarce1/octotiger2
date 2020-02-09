@@ -60,7 +60,7 @@ void silo_add_zones(const std::vector<silo_zone> &zones) {
 }
 
 void silo_end(const std::string &fname, fixed_real t) {
-	DBfile *db = DBCreateReal(fname.c_str(), DB_CLOBBER, DB_LOCAL, "Octo-Tiger II", DB_HDF5);
+	DBfile *db = DBCreateReal(fname.c_str(), DB_CLOBBER, DB_LOCAL, "Octo-Tiger II", DB_PDB);
 
 	auto optlist = DBMakeOptlist(2);
 	float ftime = (float) (double) t;
@@ -152,9 +152,6 @@ void silo_end(const std::string &fname, fixed_real t) {
 
 	for (int dim = 0; dim < NDIM; dim++) {
 		delete[] coordnames[dim];
-		delete[] coords[dim];
-	}
-	for (int dim = 0; dim < NDIM; dim++) {
 		delete[] coords[dim];
 	}
 	DBFreeOptlist(optlist);

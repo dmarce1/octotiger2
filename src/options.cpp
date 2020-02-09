@@ -31,11 +31,13 @@ bool options::process_options(int argc, char *argv[]) {
 	("cfl", po::value<double>(&cfl)->default_value(0.4), "CFL factor") //
 	("config_file", po::value<std::string>(&config_file)->default_value(""), "configuration file") //
 	("fgamma", po::value<double>(&fgamma)->default_value(7.0 / 5.0), "gamma for fluid gamma law") //
-	("global_time", po::value<bool>(&global_time)->default_value(false), "enable global time-stepping") //
+	("global_time", po::value<bool>(&global_time)->default_value(true), "enable global time-stepping") //
 	("grid_size", po::value<int>(&grid_size)->default_value(32), "size of grid") //
 	("help", "produce help message") //
 	("problem", po::value<std::string>(&problem)->default_value("sod"), "problem - sod") //
+	("output_freq", po::value<double>(&output_freq)->default_value(1.0), "output frequency") //
 	("refinement", po::value<std::string>(&refinement)->default_value("den"), "refinement type - den") //
+	("tmax", po::value<double>(&tmax)->default_value(1.0), "tmax") //
 			;
 
 	boost::program_options::variables_map vm;
@@ -65,7 +67,9 @@ bool options::process_options(int argc, char *argv[]) {
 	SHOW(fgamma);
 	SHOW(global_time);
 	SHOW(grid_size);
+	SHOW(output_freq);
 	SHOW_STRING(problem);
 	SHOW_STRING(refinement);
+	SHOW(tmax);
 	return true;
 }

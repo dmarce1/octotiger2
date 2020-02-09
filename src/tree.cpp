@@ -230,8 +230,8 @@ void tree::physical_bc_primitive() {
 			}
 			if (space_volume_.end(dim) == fixed_real(1.0)) {
 				volume<int> bc_vol = index_volume_;
-				bc_vol.begin(dim) = 1 << level_;
-				bc_vol.end(dim) = (1 << level_) + 1;
+				bc_vol.begin(dim) = inx << level_;
+				bc_vol.end(dim) = (inx << level_) + 1;
 				for (auto I = bc_vol.begin(); I != bc_vol.end(); bc_vol.inc_index((I))) {
 					auto Im = I;
 					Im[dim]--;
@@ -268,8 +268,8 @@ void tree::physical_bc_gradient() {
 			}
 			if (space_volume_.end(dim) == fixed_real(1.0)) {
 				volume<int> bc_vol = index_volume_;
-				bc_vol.begin(dim) = 1 << level_;
-				bc_vol.end(dim) = (1 << level_) + 1;
+				bc_vol.begin(dim) = inx << level_;
+				bc_vol.end(dim) = (inx << level_) + 1;
 				for (auto I = bc_vol.begin(); I != bc_vol.end(); bc_vol.inc_index((I))) {
 					auto Im = I;
 					Im[dim]--;
@@ -293,11 +293,10 @@ void tree::update_con(fixed_real t, fixed_real dt) {
 	if (is_leaf()) {
 		primitive WR;
 		primitive WL;
-		auto flux_volume = index_volume_;
 		for (int dim = 0; dim < NDIM; dim++) {
-			flux_volume.end(dim)++;}
-		for (auto I = flux_volume.begin(); I != flux_volume.end(); flux_volume.inc_index(I)) {
-			for (int dim = 0; dim < NDIM; dim++) {
+			auto flux_volume = index_volume_;
+			flux_volume.end(dim)++;
+			for (auto I = flux_volume.begin(); I != flux_volume.end(); flux_volume.inc_index(I)) {
 				const auto &IR = I;
 				auto IL = I;
 				IL[dim]--;

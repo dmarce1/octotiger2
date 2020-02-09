@@ -6,6 +6,8 @@ public:
 	bool global_time;
 	double cfl;
 	double fgamma;
+	double output_freq;
+	double tmax;
 	int grid_size;
 	std::string config_file;
 	std::string problem;
@@ -16,6 +18,8 @@ public:
 		arc & global_time;
 		arc & cfl;
 		arc & fgamma;
+		arc & output_freq;
+		arc & tmax;
 		arc & grid_size;
 		arc & config_file;
 		arc & problem;
