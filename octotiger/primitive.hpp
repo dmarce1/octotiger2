@@ -25,6 +25,7 @@ struct primitive: public general_vect<real, NF> {
 	conserved to_con() const;
 	real sound_speed() const;
 	real signal_speed() const;
+	conserved to_flux(int) const;
 };
 
 

@@ -15,6 +15,7 @@ HPX_REGISTER_COMPONENT(hpx::components::component<tree>, tree);
 
 int tree::inx;
 bool tree::global_time;
+int tree::max_level;
 fixed_real tree::cfl;
 const int tree::bw = 1;
 std::vector<std::shared_ptr<super_array<full_state>>> tree::data_arrays_;
@@ -24,6 +25,7 @@ void tree::static_init() {
 	inx = opts.grid_size;
 	global_time = opts.global_time;
 	cfl = opts.cfl;
+	max_level = opts.max_level;
 }
 
 void tree::initialize() {
@@ -43,6 +45,7 @@ void tree::initialize() {
 	state_ptr_ = data_arrays_[level_];
 	const auto vol = index_volume_.expand(bw);
 	state_ptr_->add_volume(vol);
+	refinement_flag = 0;
 }
 
 void tree::set_as_root() {
@@ -112,7 +115,7 @@ std::vector<hpx::id_type> tree::get_children() const {
 	return children_;
 }
 
-void tree::create_children() {
+std::array<hpx::future<hpx::id_type>, NCHILD> tree::create_children() {
 	assert(children_.empty());
 	std::array<hpx::future<hpx::id_type>, NCHILD> futs;
 	children_.resize(NCHILD);
@@ -129,9 +132,7 @@ void tree::create_children() {
 		}
 		futs[ci] = hpx::new_<tree>(hpx::find_here(), this_vol, level_ + 1, t_);
 	}
-	for (int ci = 0; ci < NCHILD; ci++) {
-		children_[ci] = futs[ci].get();
-	}
+	return futs;
 }
 
 tree::tree(const volume<int> &vol, int lev, fixed_real t) :
@@ -295,8 +296,8 @@ void tree::update_con(fixed_real t, fixed_real dt) {
 		primitive WL;
 		for (int dim = 0; dim < NDIM; dim++) {
 			auto flux_volume = index_volume_;
-			flux_volume.end(dim)++;
-			for (auto I = flux_volume.begin(); I != flux_volume.end(); flux_volume.inc_index(I)) {
+			flux_volume.end(dim)++;for
+(			auto I = flux_volume.begin(); I != flux_volume.end(); flux_volume.inc_index(I)) {
 				const auto &IR = I;
 				auto IL = I;
 				IL[dim]--;
@@ -381,5 +382,39 @@ void tree::send_silo() {
 		}
 		hpx::wait_all(futs.begin(), futs.end());
 	}
+}
+
+bool tree::check_for_refine(fixed_real t) {
+	bool rc = false;
+	if (is_leaf()) {
+		if (max_level > level_) {
+			auto cfuts = create_children();
+			for (int ci = 0; ci < NCHILD; ci++) {
+				cfuts[ci] = cfuts[ci].then([t](hpx::future<hpx::id_type> f) {
+					const auto id = f.get();
+					if (t == fixed_real(0.0)) {
+						set_initial_conditions_action()(id);
+					} else {
+						assert(false);
+						/***************/
+					}
+					return id;
+				});
+			}
+			for (int ci = 0; ci < NCHILD; ci++) {
+				children_[ci] = cfuts[ci].get();
+			}
+			rc = true;
+		}
+	} else {
+		std::array<hpx::future<bool>, NCHILD> cfuts;
+		for (int ci = 0; ci < NCHILD; ci++) {
+			cfuts[ci] = hpx::async<check_for_refine_action>(children_[ci], t);
+		}
+		for (int ci = 0; ci < NCHILD; ci++) {
+			rc = rc || cfuts[ci].get();
+		}
+	}
+	return rc;
 }
 

@@ -10,12 +10,12 @@
 
 static auto sod(const vect &x) {
 	conserved U;
-	U.P = vect(0);
+	U.S = vect(0);
 	if( x[0] > 0.5) {
-		U.rho = 1.0;
+		U.D = 1.0;
 		U.E = 2.5;
 	} else {
-		U.rho = 0.125;
+		U.D = 0.125;
 		U.E = 0.25;
 	}
 	return U;

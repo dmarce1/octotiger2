@@ -9,6 +9,7 @@ public:
 	double output_freq;
 	double tmax;
 	int grid_size;
+	int max_level;
 	std::string config_file;
 	std::string problem;
 	std::string refinement;
@@ -21,6 +22,7 @@ public:
 		arc & output_freq;
 		arc & tmax;
 		arc & grid_size;
+		arc & max_level;
 		arc & config_file;
 		arc & problem;
 		arc & refinement;

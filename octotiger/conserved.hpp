@@ -13,9 +13,9 @@
 
 
 struct conserved: public general_vect<real, NF> {
-	real &rho;
+	real &D;
 	real &E;
-	general_vect<real, NDIM> &P;
+	general_vect<real, NDIM> &S;
 	conserved();
 	conserved& operator=(const conserved& other);
 	conserved& operator=(const general_vect<real, NF>&);

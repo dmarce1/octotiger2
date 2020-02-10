@@ -60,7 +60,7 @@ void silo_add_zones(const std::vector<silo_zone> &zones) {
 }
 
 void silo_end(const std::string &fname, fixed_real t) {
-	DBfile *db = DBCreateReal(fname.c_str(), DB_CLOBBER, DB_LOCAL, "Octo-Tiger II", DB_PDB);
+	DBfile *db = DBCreateReal(fname.c_str(), DB_CLOBBER, DB_LOCAL, "Octo-Tiger II", DB_HDF5);
 
 	auto optlist = DBMakeOptlist(2);
 	float ftime = (float) (double) t;
@@ -114,8 +114,8 @@ void silo_end(const std::string &fname, fixed_real t) {
 		zones.push_back(z.second[3]);
 		zones.push_back(z.second[2]);
 #elif(NDIM==1)
-		zones.push_back(z.second[0]);
 		zones.push_back(z.second[1]);
+		zones.push_back(z.second[0]);
 #else
 #error
 #endif
@@ -123,7 +123,7 @@ void silo_end(const std::string &fname, fixed_real t) {
 	DBPutZonelist2(db, "zonelist", nzones, NDIM, zones.data(), zones.size(), 0, 0, 0, shapetypes, shapesize, shapecount, 1, optlist);
 	DBPutUcdmesh(db, "mesh", NDIM, coordnames, coords, nnodes, nzones, "zonelist", NULL, DB_DOUBLE, optlist);
 	const char *prim_names[] = { "rho", "p", "vx", "vy", "vz" };
-	const char *con_names[] = { "D", "E", "Px", "Py", "Pz" };
+	const char *con_names[] = { "D", "E", "Sx", "Sy", "Sz" };
 	std::vector<double> data;
 	for (int f = 0; f < NF; f++) {
 		data.clear();

@@ -32,6 +32,7 @@ class tree: public hpx::components::component_base<tree> {
 	static int inx;
 	static bool global_time;
 	static fixed_real cfl;
+	static int max_level;
 	const static int bw;
 	static std::vector<std::shared_ptr<super_array<full_state>>> data_arrays_;
 
@@ -49,6 +50,8 @@ class tree: public hpx::components::component_base<tree> {
 	std::vector<hpx::id_type> children_;
 	std::vector<hpx::id_type> neighbors_;
 	std::vector<node_attr> neighbor_attr_;
+
+	std::atomic<int> refinement_flag;
 
 	void initialize();
 
@@ -76,7 +79,7 @@ public:
 	void set_as_root();
 	HPX_DEFINE_COMPONENT_ACTION(tree, set_as_root);
 
-	void create_children();
+	std::array<hpx::future<hpx::id_type>,NCHILD> create_children();
 
 	static void static_init();
 
@@ -116,6 +119,10 @@ public:
 
 	std::vector<hpx::id_type> get_children() const;
 	HPX_DEFINE_COMPONENT_ACTION(tree, get_children);
+
+	bool check_for_refine(fixed_real t);
+	HPX_DEFINE_COMPONENT_ACTION(tree, check_for_refine);
+
 
 };
 

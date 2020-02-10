@@ -34,9 +34,10 @@ bool options::process_options(int argc, char *argv[]) {
 	("global_time", po::value<bool>(&global_time)->default_value(true), "enable global time-stepping") //
 	("grid_size", po::value<int>(&grid_size)->default_value(32), "size of grid") //
 	("help", "produce help message") //
+	("max_level", po::value<int>(&max_level)->default_value(1), "size of grid") //
 	("problem", po::value<std::string>(&problem)->default_value("sod"), "problem - sod") //
 	("output_freq", po::value<double>(&output_freq)->default_value(1.0), "output frequency") //
-	("refinement", po::value<std::string>(&refinement)->default_value("den"), "refinement type - den") //
+	("refinement", po::value<std::string>(&refinement)->default_value("den"), "refinement type - uni, den") //
 	("tmax", po::value<double>(&tmax)->default_value(1.0), "tmax") //
 			;
 
@@ -67,6 +68,7 @@ bool options::process_options(int argc, char *argv[]) {
 	SHOW(fgamma);
 	SHOW(global_time);
 	SHOW(grid_size);
+	SHOW(max_level);
 	SHOW(output_freq);
 	SHOW_STRING(problem);
 	SHOW_STRING(refinement);

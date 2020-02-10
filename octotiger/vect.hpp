@@ -8,8 +8,8 @@
 #ifndef VECT_HPP_
 #define VECT_HPP_
 
-#include "dim.hpp"
-#include "real.hpp"
+#include <octotiger/dim.hpp>
+#include <octotiger/real.hpp>
 
 #include <array>
 #include <atomic>

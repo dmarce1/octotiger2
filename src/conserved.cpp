@@ -18,14 +18,14 @@ conserved& conserved::operator=(const general_vect<real, NF> &other) {
 }
 
 conserved::conserved() :
-		rho((*this)[0]), E((*this)[1]), P(*(reinterpret_cast<general_vect<real, NDIM>*>(&((*this)[2])))) {
+		D((*this)[0]), E((*this)[1]), S(*(reinterpret_cast<general_vect<real, NDIM>*>(&((*this)[2])))) {
 }
 
 primitive conserved::to_prim() const {
 	static const auto fgamma = options::get().fgamma;
 	primitive W;
-	W.rho = rho;
-	W.p = real(fgamma - 1.0) * (E - real(0.5) * P.dot(P) / rho);
-	W.v = P / rho;
+	W.rho = D;
+	W.p = real(fgamma - 1.0) * (E - real(0.5) * S.dot(S) / D);
+	W.v = S / D;
 	return W;
 }

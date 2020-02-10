@@ -6,10 +6,9 @@
 #include <fenv.h>
 
 int hpx_main(int argc, char *argv[]) {
-    feenableexcept(FE_DIVBYZERO);
-    feenableexcept(FE_INVALID);
-    feenableexcept(FE_OVERFLOW);
-
+	feenableexcept(FE_DIVBYZERO);
+	feenableexcept(FE_INVALID);
+	feenableexcept(FE_OVERFLOW);
 
 	options opts;
 
@@ -20,6 +19,9 @@ int hpx_main(int argc, char *argv[]) {
 	auto root = hpx::new_<tree>(hpx::find_here()).get();
 	tree::set_as_root_action()(root);
 	tree::set_initial_conditions_action()(root);
+	while (tree::check_for_refine_action()(root, 0.0)) {
+		NULL;
+	}
 	tree::con_to_prim_action()(root, 0.0, 0.0);
 	tree::physical_bc_primitive_action()(root);
 	tree::gradients_action()(root, 0.0);
@@ -30,7 +32,7 @@ int hpx_main(int argc, char *argv[]) {
 	fixed_real t = 0.0;
 	int step = 0;
 	int oiter = 0;
-	printf( "Starting main execution loop...\n");
+	printf("Starting main execution loop...\n");
 	while (t < fixed_real(opts.tmax)) {
 		fixed_real dt = tree::timestep_action()(root, t);
 		printf("%i %e %e\n", step, (double) t, (double) dt);
@@ -52,7 +54,8 @@ int hpx_main(int argc, char *argv[]) {
 			silo_end(name, t);
 		}
 	}
-
+	printf("%i %e\n", step, (double) t);
+	printf("Finished!\n");
 	return hpx::finalize();
 }
 

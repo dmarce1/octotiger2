@@ -25,8 +25,8 @@ primitive::primitive() :
 conserved primitive::to_con() const {
 	static const auto fgamma = options::get().fgamma;
 	conserved U;
-	U.rho = rho;
-	U.P = v * rho;
+	U.D = rho;
+	U.S = v * rho;
 	U.E = (p / real(fgamma - 1.0)) + real(0.5) * v.dot(v) * rho;
 	return U;
 }
@@ -39,4 +39,16 @@ real primitive::sound_speed() const {
 real primitive::signal_speed() const {
 	static const auto fgamma = options::get().fgamma;
 	return sound_speed() + abs(v);
+}
+
+
+conserved primitive::to_flux(int dim) const {
+	conserved F;
+	conserved U = to_con();
+	for( int f = 0; f < NF; f++) {
+		F[f] = U[f] * v[dim];
+	}
+	F.S[dim] += p;
+	F.E += p * v[dim];
+	return F;
 }
