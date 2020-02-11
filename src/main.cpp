@@ -17,7 +17,7 @@ int hpx_main(int argc, char *argv[]) {
 	tree::set_as_root_action()(root);
 	tree::set_initial_conditions_action()(root);
 	while (tree::check_for_refine_action()(root, 0.0)) {
-		NULL;
+		tree::set_initial_conditions_action()(root);
 	}
 	tree::con_to_prim_action()(root, 0.0, 0.0);
 	tree::physical_bc_primitive_action()(root);

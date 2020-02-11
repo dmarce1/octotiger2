@@ -10,7 +10,7 @@
 
 #include <octotiger/volume.hpp>
 
-#include <hpx/lcos/local/shared_mutex.hpp>
+#include <hpx/lcos/local/mutex.hpp>
 
 #include <cassert>
 #include <set>
@@ -22,7 +22,7 @@ class super_array {
 	std::vector<T> data_;
 	volume<int> volume_;
 	std::set<volume<int>> sub_volumes_;
-	mutable hpx::lcos::local::shared_mutex mtx_;
+	mutable hpx::lcos::local::mutex mtx_;
 
 	void resize(const volume<int> &new_volume) {
 		if (new_volume != volume_) {
@@ -38,12 +38,8 @@ class super_array {
 
 public:
 
-	hpx::lcos::local::shared_mutex& get_mutex() const {
-		return mtx_;
-	}
-
 	void add_volume(const volume<int> &this_vol) {
-		std::lock_guard<hpx::lcos::local::shared_mutex> lock(mtx_);
+		std::lock_guard<hpx::lcos::local::mutex> lock(mtx_);
 		if (!data_.empty()) {
 			const auto new_volume = volume_.union_(this_vol);
 			resize(new_volume);
@@ -55,13 +51,13 @@ public:
 	}
 
 	void remove_volume(const volume<int> &this_vol) {
-		std::lock_guard<hpx::lcos::local::shared_mutex> lock(mtx_);
+		std::lock_guard<hpx::lcos::local::mutex> lock(mtx_);
 		assert(sub_volumes_.find(this_vol) != sub_volumes_.end());
 		sub_volumes_.erase(this_vol);
 	}
 
 	void shrink_to_fit() {
-		std::lock_guard<hpx::lcos::local::shared_mutex> lock(mtx_);
+		std::lock_guard<hpx::lcos::local::mutex> lock(mtx_);
 		volume<int> new_volume;
 		for (const auto &sv : sub_volumes_) {
 			new_volume = new_volume.union_(sv);

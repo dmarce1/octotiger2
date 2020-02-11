@@ -11,8 +11,6 @@
 #include <octotiger/silo.hpp>
 #include <octotiger/tree.hpp>
 
-#include <shared_mutex>
-
 HPX_REGISTER_COMPONENT(hpx::components::component<tree>, tree);
 
 int tree::inx;
@@ -20,6 +18,7 @@ bool tree::global_time;
 int tree::max_level;
 fixed_real tree::cfl;
 const int tree::bw = 1;
+hpx::lcos::local::mutex tree::mtx;
 std::vector<std::shared_ptr<super_array<full_state>>> tree::data_arrays_;
 
 void tree::static_init() {
@@ -38,11 +37,14 @@ void tree::initialize() {
 	}
 	dx_ = real(space_volume_.end(0) - space_volume_.begin(0)) / inx;
 	dt_ = 0.0;
-	if (level_ >= data_arrays_.size()) {
-		data_arrays_.resize(level_ + 1);
-	}
-	if (data_arrays_[level_] == nullptr) {
-		data_arrays_[level_] = std::make_shared<super_array<full_state>>();
+	{
+		std::lock_guard<hpx::lcos::local::mutex> lock(mtx);
+		if (level_ >= data_arrays_.size()) {
+			data_arrays_.resize(level_ + 1);
+		}
+		if (data_arrays_[level_] == nullptr) {
+			data_arrays_[level_] = std::make_shared<super_array<full_state>>();
+		}
 	}
 	state_ptr_ = data_arrays_[level_];
 	const auto vol = index_volume_.expand(bw);
@@ -58,7 +60,7 @@ void tree::set_as_root() {
 	t_ = 0.0;
 	level_ = 0;
 	initialize();
-	std::shared_lock<hpx::lcos::local::shared_mutex> lock(state_ptr_->get_mutex());
+
 	for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 		(*state_ptr_)[I].t = (*state_ptr_)[I].dt = fixed_real(0.0);
 	}
@@ -118,7 +120,7 @@ std::vector<hpx::id_type> tree::get_children() const {
 	return children_;
 }
 
-std::array<hpx::future<hpx::id_type>, NCHILD> tree::create_children() {
+void tree::create_children() {
 	assert(children_.empty());
 	std::array<hpx::future<hpx::id_type>, NCHILD> futs;
 	children_.resize(NCHILD);
@@ -135,7 +137,9 @@ std::array<hpx::future<hpx::id_type>, NCHILD> tree::create_children() {
 		}
 		futs[ci] = hpx::new_<tree>(hpx::find_here(), this_vol, level_ + 1, t_);
 	}
-	return futs;
+	for (int ci = 0; ci < NCHILD; ci++) {
+		children_[ci] = futs[ci].get();
+	}
 }
 
 tree::tree(const volume<int> &vol, int lev, fixed_real t) :
@@ -146,7 +150,7 @@ tree::tree(const volume<int> &vol, int lev, fixed_real t) :
 void tree::con_to_prim(fixed_real t, fixed_real dt) {
 	if (is_leaf()) {
 		if (global_time || t + dt == t_ + dt_) {
-			std::shared_lock<hpx::lcos::local::shared_mutex> lock(state_ptr_->get_mutex());
+
 			for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 				primitive &W = (*state_ptr_)[I].W;
 				const conserved &U = (*state_ptr_)[I].U;
@@ -167,7 +171,7 @@ void tree::con_to_prim(fixed_real t, fixed_real dt) {
 void tree::gradients(fixed_real t) {
 	if (is_leaf()) {
 		if (global_time || t == t_) {
-			std::shared_lock<hpx::lcos::local::shared_mutex> lock(state_ptr_->get_mutex());
+
 			for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 				const primitive W = (*state_ptr_)[I].W;
 				for (int dim = 0; dim < NDIM; dim++) {
@@ -197,7 +201,7 @@ fixed_real tree::timestep(fixed_real t) {
 	dt_ = fixed_real::max();
 	if (is_leaf()) {
 		if (t == t_ || global_time) {
-			std::shared_lock<hpx::lcos::local::shared_mutex> lock(state_ptr_->get_mutex());
+
 			for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 				primitive W = (*state_ptr_)[I].W;
 				const auto vsig = W.signal_speed();
@@ -224,7 +228,7 @@ fixed_real tree::timestep(fixed_real t) {
 
 void tree::physical_bc_primitive() {
 	if (is_leaf()) {
-		std::shared_lock<hpx::lcos::local::shared_mutex> lock(state_ptr_->get_mutex());
+
 		for (int dim = 0; dim < NDIM; dim++) {
 			if (space_volume_.begin(dim) == fixed_real(0.0)) {
 				volume<int> bc_vol = index_volume_;
@@ -263,7 +267,7 @@ void tree::physical_bc_primitive() {
 
 void tree::physical_bc_gradient() {
 	if (is_leaf()) {
-		std::shared_lock<hpx::lcos::local::shared_mutex> lock(state_ptr_->get_mutex());
+
 		for (int dim = 0; dim < NDIM; dim++) {
 			if (space_volume_.begin(dim) == fixed_real(0.0)) {
 				volume<int> bc_vol = index_volume_;
@@ -304,7 +308,7 @@ void tree::update_con(fixed_real t, fixed_real dt) {
 	if (is_leaf()) {
 		primitive WR;
 		primitive WL;
-		std::shared_lock<hpx::lcos::local::shared_mutex> lock(state_ptr_->get_mutex());
+
 		for (int dim = 0; dim < NDIM; dim++) {
 			auto flux_volume = index_volume_;
 			flux_volume.end(dim)++;for
@@ -340,7 +344,7 @@ void tree::update_con(fixed_real t, fixed_real dt) {
 
 std::vector<real> tree::get_prolong_con() {
 	std::vector<real> data;
-	std::shared_lock<hpx::lcos::local::shared_mutex> lock(state_ptr_->get_mutex());
+
 	for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 		const auto &U = (*state_ptr_)[I].U;
 		for (int f = 0; f < NF; f++) {
@@ -352,7 +356,7 @@ std::vector<real> tree::get_prolong_con() {
 
 void tree::set_con(const std::vector<real> &data) {
 	int i = 0;
-	std::shared_lock<hpx::lcos::local::shared_mutex> lock(state_ptr_->get_mutex());
+
 	for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 		auto &U = (*state_ptr_)[I].U;
 		for (int f = 0; f < NF; f++) {
@@ -362,12 +366,19 @@ void tree::set_con(const std::vector<real> &data) {
 }
 
 void tree::set_initial_conditions() {
-	const auto f = get_init_func();
-	std::shared_lock<hpx::lcos::local::shared_mutex> lock(state_ptr_->get_mutex());
-	for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
-		(*state_ptr_)[I].U = f(X(I));
-		(*state_ptr_)[I].t = 0;
-		(*state_ptr_)[I].dt = 0;
+	if (is_leaf()) {
+		static const auto f = get_init_func();
+		for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
+			(*state_ptr_)[I].U = f(X(I));
+			(*state_ptr_)[I].t = 0;
+			(*state_ptr_)[I].dt = 0;
+		}
+	} else {
+		std::array<hpx::future<void>, NCHILD> futs;
+		for (int ci = 0; ci < NCHILD; ci++) {
+			futs[ci] = hpx::async<set_initial_conditions_action>(children_[ci]);
+		}
+		hpx::wait_all(futs.begin(), futs.end());
 	}
 }
 
@@ -375,22 +386,20 @@ void tree::send_silo() {
 	static const auto root_loc = hpx::find_all_localities()[0];
 	if (is_leaf()) {
 		std::vector<silo_zone> zones;
-		{
-			std::shared_lock<hpx::lcos::local::shared_mutex> lock(state_ptr_->get_mutex());
-			for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
-				silo_zone z;
-				z.state = (*state_ptr_)[I];
-				for (int ci = 0; ci < NCHILD; ci++) {
-					for (int dim = 0; dim < NDIM; dim++) {
-						if (((ci >> dim) & 1) == 0) {
-							z.nodes[ci][dim] = X(I, dim) - fixed_real(0.5) * dx_;
-						} else {
-							z.nodes[ci][dim] = X(I, dim) + fixed_real(0.5) * dx_;
-						}
+
+		for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
+			silo_zone z;
+			z.state = (*state_ptr_)[I];
+			for (int ci = 0; ci < NCHILD; ci++) {
+				for (int dim = 0; dim < NDIM; dim++) {
+					if (((ci >> dim) & 1) == 0) {
+						z.nodes[ci][dim] = X(I, dim) - fixed_real(0.5) * dx_;
+					} else {
+						z.nodes[ci][dim] = X(I, dim) + fixed_real(0.5) * dx_;
 					}
 				}
-				zones.push_back(z);
 			}
+			zones.push_back(z);
 		}
 		silo_add_zones_action()(root_loc, std::move(zones));
 	} else {
@@ -406,22 +415,7 @@ bool tree::check_for_refine(fixed_real t) {
 	bool rc = false;
 	if (is_leaf()) {
 		if (max_level > level_) {
-			auto cfuts = create_children();
-			for (int ci = 0; ci < NCHILD; ci++) {
-				cfuts[ci] = cfuts[ci].then([t](hpx::future<hpx::id_type> f) {
-					const auto id = f.get();
-					if (t == fixed_real(0.0)) {
-						set_initial_conditions_action()(id);
-					} else {
-						assert(false);
-						/***************/
-					}
-					return id;
-				});
-			}
-			for (int ci = 0; ci < NCHILD; ci++) {
-				children_[ci] = cfuts[ci].get();
-			}
+			create_children();
 			rc = true;
 		}
 	} else {
@@ -429,7 +423,7 @@ bool tree::check_for_refine(fixed_real t) {
 		for (int ci = 0; ci < NCHILD; ci++) {
 			cfuts[ci] = hpx::async<check_for_refine_action>(children_[ci], t);
 		}
-		hpx::wait_all(cfuts.begin(),cfuts.end());
+		hpx::wait_all(cfuts.begin(), cfuts.end());
 		for (int ci = 0; ci < NCHILD; ci++) {
 			rc = rc || cfuts[ci].get();
 		}

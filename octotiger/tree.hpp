@@ -33,6 +33,7 @@ class tree: public hpx::components::component_base<tree> {
 	static bool global_time;
 	static fixed_real cfl;
 	static int max_level;
+	static hpx::lcos::local::mutex mtx;
 	const static int bw;
 	static std::vector<std::shared_ptr<super_array<full_state>>> data_arrays_;
 
@@ -79,7 +80,7 @@ public:
 	void set_as_root();
 	HPX_DEFINE_COMPONENT_ACTION(tree, set_as_root);
 
-	std::array<hpx::future<hpx::id_type>,NCHILD> create_children();
+	void create_children();
 
 	static void static_init();
 
