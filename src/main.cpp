@@ -6,9 +6,6 @@
 #include <fenv.h>
 
 int hpx_main(int argc, char *argv[]) {
-	feenableexcept(FE_DIVBYZERO);
-	feenableexcept(FE_INVALID);
-	feenableexcept(FE_OVERFLOW);
 
 	options opts;
 
@@ -60,6 +57,9 @@ int hpx_main(int argc, char *argv[]) {
 }
 
 int main(int argc, char *argv[]) {
+	feenableexcept(FE_DIVBYZERO);
+	feenableexcept(FE_INVALID);
+	feenableexcept(FE_OVERFLOW);
 	std::vector<std::string> cfg = { "hpx.commandline.allow_unknown=1" };
 	hpx::init(argc, argv, cfg);
 }

@@ -239,7 +239,7 @@ conserved exact_riemann(const primitive &WL, const primitive &WR, int dim) {
 				const auto a0R = aR * pow(P0 / PR, (fgamma - 1) / (2 * fgamma));
 				sHR = uR + aR;
 				sTR = s0 + a0R;
-				assert(sHR >= sTR);
+	//			assert(sHR >= sTR);
 				if (sHR < 0.0) {
 					Wi = WR;
 				} else if (sTR > 0.0) {

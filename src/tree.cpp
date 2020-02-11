@@ -11,6 +11,8 @@
 #include <octotiger/silo.hpp>
 #include <octotiger/tree.hpp>
 
+#include <shared_mutex>
+
 HPX_REGISTER_COMPONENT(hpx::components::component<tree>, tree);
 
 int tree::inx;
@@ -56,6 +58,7 @@ void tree::set_as_root() {
 	t_ = 0.0;
 	level_ = 0;
 	initialize();
+	std::shared_lock<hpx::lcos::local::shared_mutex> lock(state_ptr_->get_mutex());
 	for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 		(*state_ptr_)[I].t = (*state_ptr_)[I].dt = fixed_real(0.0);
 	}
@@ -143,6 +146,7 @@ tree::tree(const volume<int> &vol, int lev, fixed_real t) :
 void tree::con_to_prim(fixed_real t, fixed_real dt) {
 	if (is_leaf()) {
 		if (global_time || t + dt == t_ + dt_) {
+			std::shared_lock<hpx::lcos::local::shared_mutex> lock(state_ptr_->get_mutex());
 			for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 				primitive &W = (*state_ptr_)[I].W;
 				const conserved &U = (*state_ptr_)[I].U;
@@ -156,12 +160,14 @@ void tree::con_to_prim(fixed_real t, fixed_real dt) {
 		for (int ci = 0; ci < NCHILD; ci++) {
 			futs[ci] = hpx::async<con_to_prim_action>(children_[ci], t, dt);
 		}
+		hpx::wait_all(futs.begin(), futs.end());
 	}
 }
 
 void tree::gradients(fixed_real t) {
 	if (is_leaf()) {
 		if (global_time || t == t_) {
+			std::shared_lock<hpx::lcos::local::shared_mutex> lock(state_ptr_->get_mutex());
 			for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 				const primitive W = (*state_ptr_)[I].W;
 				for (int dim = 0; dim < NDIM; dim++) {
@@ -183,6 +189,7 @@ void tree::gradients(fixed_real t) {
 		for (int ci = 0; ci < NCHILD; ci++) {
 			futs[ci] = hpx::async<gradients_action>(children_[ci], t);
 		}
+		hpx::wait_all(futs.begin(), futs.end());
 	}
 }
 
@@ -190,6 +197,7 @@ fixed_real tree::timestep(fixed_real t) {
 	dt_ = fixed_real::max();
 	if (is_leaf()) {
 		if (t == t_ || global_time) {
+			std::shared_lock<hpx::lcos::local::shared_mutex> lock(state_ptr_->get_mutex());
 			for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 				primitive W = (*state_ptr_)[I].W;
 				const auto vsig = W.signal_speed();
@@ -216,6 +224,7 @@ fixed_real tree::timestep(fixed_real t) {
 
 void tree::physical_bc_primitive() {
 	if (is_leaf()) {
+		std::shared_lock<hpx::lcos::local::shared_mutex> lock(state_ptr_->get_mutex());
 		for (int dim = 0; dim < NDIM; dim++) {
 			if (space_volume_.begin(dim) == fixed_real(0.0)) {
 				volume<int> bc_vol = index_volume_;
@@ -254,6 +263,7 @@ void tree::physical_bc_primitive() {
 
 void tree::physical_bc_gradient() {
 	if (is_leaf()) {
+		std::shared_lock<hpx::lcos::local::shared_mutex> lock(state_ptr_->get_mutex());
 		for (int dim = 0; dim < NDIM; dim++) {
 			if (space_volume_.begin(dim) == fixed_real(0.0)) {
 				volume<int> bc_vol = index_volume_;
@@ -294,6 +304,7 @@ void tree::update_con(fixed_real t, fixed_real dt) {
 	if (is_leaf()) {
 		primitive WR;
 		primitive WL;
+		std::shared_lock<hpx::lcos::local::shared_mutex> lock(state_ptr_->get_mutex());
 		for (int dim = 0; dim < NDIM; dim++) {
 			auto flux_volume = index_volume_;
 			flux_volume.end(dim)++;for
@@ -323,11 +334,13 @@ void tree::update_con(fixed_real t, fixed_real dt) {
 		for (int ci = 0; ci < NCHILD; ci++) {
 			futs[ci] = hpx::async<update_con_action>(children_[ci], t, dt);
 		}
+		hpx::wait_all(futs.begin(),futs.end());
 	}
 }
 
 std::vector<real> tree::get_prolong_con() {
 	std::vector<real> data;
+	std::shared_lock<hpx::lcos::local::shared_mutex> lock(state_ptr_->get_mutex());
 	for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 		const auto &U = (*state_ptr_)[I].U;
 		for (int f = 0; f < NF; f++) {
@@ -339,6 +352,7 @@ std::vector<real> tree::get_prolong_con() {
 
 void tree::set_con(const std::vector<real> &data) {
 	int i = 0;
+	std::shared_lock<hpx::lcos::local::shared_mutex> lock(state_ptr_->get_mutex());
 	for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 		auto &U = (*state_ptr_)[I].U;
 		for (int f = 0; f < NF; f++) {
@@ -349,6 +363,7 @@ void tree::set_con(const std::vector<real> &data) {
 
 void tree::set_initial_conditions() {
 	const auto f = get_init_func();
+	std::shared_lock<hpx::lcos::local::shared_mutex> lock(state_ptr_->get_mutex());
 	for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 		(*state_ptr_)[I].U = f(X(I));
 		(*state_ptr_)[I].t = 0;
@@ -360,19 +375,22 @@ void tree::send_silo() {
 	static const auto root_loc = hpx::find_all_localities()[0];
 	if (is_leaf()) {
 		std::vector<silo_zone> zones;
-		for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
-			silo_zone z;
-			z.state = (*state_ptr_)[I];
-			for (int ci = 0; ci < NCHILD; ci++) {
-				for (int dim = 0; dim < NDIM; dim++) {
-					if (((ci >> dim) & 1) == 0) {
-						z.nodes[ci][dim] = X(I, dim) - fixed_real(0.5) * dx_;
-					} else {
-						z.nodes[ci][dim] = X(I, dim) + fixed_real(0.5) * dx_;
+		{
+			std::shared_lock<hpx::lcos::local::shared_mutex> lock(state_ptr_->get_mutex());
+			for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
+				silo_zone z;
+				z.state = (*state_ptr_)[I];
+				for (int ci = 0; ci < NCHILD; ci++) {
+					for (int dim = 0; dim < NDIM; dim++) {
+						if (((ci >> dim) & 1) == 0) {
+							z.nodes[ci][dim] = X(I, dim) - fixed_real(0.5) * dx_;
+						} else {
+							z.nodes[ci][dim] = X(I, dim) + fixed_real(0.5) * dx_;
+						}
 					}
 				}
+				zones.push_back(z);
 			}
-			zones.push_back(z);
 		}
 		silo_add_zones_action()(root_loc, std::move(zones));
 	} else {
@@ -411,6 +429,7 @@ bool tree::check_for_refine(fixed_real t) {
 		for (int ci = 0; ci < NCHILD; ci++) {
 			cfuts[ci] = hpx::async<check_for_refine_action>(children_[ci], t);
 		}
+		hpx::wait_all(cfuts.begin(),cfuts.end());
 		for (int ci = 0; ci < NCHILD; ci++) {
 			rc = rc || cfuts[ci].get();
 		}
