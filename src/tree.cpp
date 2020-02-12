@@ -31,9 +31,9 @@ void tree::static_init() {
 
 void tree::initialize() {
 	for (int dim = 0; dim < NDIM; dim++) {
-		const auto div = 1.0 / (inx << level_);
-		space_volume_.begin(dim) = index_volume_.begin(dim) * div;
-		space_volume_.end(dim) = index_volume_.end(dim) * div;
+		const fixed_real div = fixed_real(2) / fixed_real(inx << level_);
+		space_volume_.begin(dim) = fixed_real(index_volume_.begin(dim)) * div - fixed_real(1.0);
+		space_volume_.end(dim) = fixed_real(index_volume_.end(dim)) * div - fixed_real(1.0);
 	}
 	dx_ = real(space_volume_.end(0) - space_volume_.begin(0)) / inx;
 	dt_ = 0.0;
@@ -230,7 +230,7 @@ void tree::physical_bc_primitive() {
 	if (is_leaf()) {
 
 		for (int dim = 0; dim < NDIM; dim++) {
-			if (space_volume_.begin(dim) == fixed_real(0.0)) {
+			if (space_volume_.begin(dim) == fixed_real(-1.0)) {
 				volume<int> bc_vol = index_volume_;
 				bc_vol.begin(dim) = -1;
 				bc_vol.end(dim) = 0;
@@ -269,7 +269,7 @@ void tree::physical_bc_gradient() {
 	if (is_leaf()) {
 
 		for (int dim = 0; dim < NDIM; dim++) {
-			if (space_volume_.begin(dim) == fixed_real(0.0)) {
+			if (space_volume_.begin(dim) == fixed_real(-1.0)) {
 				volume<int> bc_vol = index_volume_;
 				bc_vol.begin(dim) = -1;
 				bc_vol.end(dim) = 0;
@@ -320,8 +320,12 @@ void tree::update_con(fixed_real t, fixed_real dt) {
 				auto &L = (*state_ptr_)[IL];
 				if (L.t + L.dt == t + dt || R.t + R.dt == t + dt || global_time) {
 					const auto this_dt = real(global_time ? dt : min(L.dt, R.dt));
-					WR = R.W - (R.dW[dim] - R.dWdt() * this_dt) * 0.5;
-					WL = L.W + (L.dW[dim] + L.dWdt() * this_dt) * 0.5;
+					WR = R.W;
+					WL = L.W;
+					WR = WR - R.dW[dim]* 0.5;
+					WL = WL + L.dW[dim]* 0.5;
+					WR = WR + R.dWdt() * this_dt * 0.5;
+					WL = WL + L.dWdt() * this_dt * 0.5;
 					const auto F = riemann_solver(WL, WR, dim);
 					const auto dU = F * (this_dt / real(dx_));
 					if (index_volume_.contains(IR)) {

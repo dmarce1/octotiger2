@@ -16,7 +16,7 @@ void enable_floating_point_exceptions();
 
 template<class T>
 inline T minmod(const T &a, const T &b) {
-	return (copysign(T(0.5), a) + copysign(T(0.5), a)) * min(abs(a), abs(b));
+	return (copysign(T(0.5), a) + copysign(T(0.5), b)) * min(abs(a), abs(b));
 }
 
 #endif /* SRC_MATH_HPP_ */

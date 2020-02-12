@@ -66,7 +66,7 @@ public:
 	}
 
 	inline fixed_real X(const index_type &I, int dim) {
-		return (fixed_real(I[dim]) + fixed_real(0.5)) * dx_;
+		return (fixed_real(I[dim]) + fixed_real(0.5)) * dx_ - fixed_real(1.0);
 	}
 
 	inline vect X(const index_type &I) {

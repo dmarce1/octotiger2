@@ -32,12 +32,12 @@ bool options::process_options(int argc, char *argv[]) {
 	("config_file", po::value<std::string>(&config_file)->default_value(""), "configuration file") //
 	("fgamma", po::value<double>(&fgamma)->default_value(7.0 / 5.0), "gamma for fluid gamma law") //
 	("global_time", po::value<bool>(&global_time)->default_value(true), "enable global time-stepping") //
-	("grid_size", po::value<int>(&grid_size)->default_value(32), "size of grid") //
+	("grid_size", po::value<int>(&grid_size)->default_value(256), "size of grid") //
 	("help", "produce help message") //
-	("max_level", po::value<int>(&max_level)->default_value(3), "size of grid") //
-	("problem", po::value<std::string>(&problem)->default_value("sod"), "problem - sod") //
+	("max_level", po::value<int>(&max_level)->default_value(0), "size of grid") //
+	("problem", po::value<std::string>(&problem)->default_value("blast"), "problem - blast, sod") //
 	("output_freq", po::value<double>(&output_freq)->default_value(1.0), "output frequency") //
-	("refinement", po::value<std::string>(&refinement)->default_value("den"), "refinement type - uni, den") //
+	("refinement", po::value<std::string>(&refinement)->default_value("den"), "refinement type - den, uni") //
 	("tmax", po::value<double>(&tmax)->default_value(1.0), "tmax") //
 			;
 

@@ -11,7 +11,7 @@
 static auto sod(const vect &x) {
 	conserved U;
 	U.S = vect(0);
-	if( x[0] > 0.5) {
+	if (x[0] > 0.0) {
 		U.D = 1.0;
 		U.E = 2.5;
 	} else {
@@ -21,10 +21,20 @@ static auto sod(const vect &x) {
 	return U;
 }
 
+static auto blast(const vect &x) {
+	conserved U;
+	U.S = vect(0);
+	U.D = 1.0;
+	U.E = max(1.0e-3,exp(-1000.0*x.dot(x)));
+	return U;
+}
+
 init_func get_init_func() {
 	static const auto opts = options::get();
 	if (opts.problem == "sod") {
 		return sod;
+	} else if (opts.problem == "blast") {
+		return blast;
 	} else {
 		printf("%s is not a known problem\n", opts.problem.c_str());
 	}
