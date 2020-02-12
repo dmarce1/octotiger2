@@ -149,9 +149,7 @@ tree::tree(const volume<int> &vol, int lev, fixed_real t) :
 
 void tree::con_to_prim(fixed_real t, fixed_real dt) {
 	if (is_leaf()) {
-		printf( "%e %e %e %e\n", real(t).get(), real(dt).get(), real(t_).get(), real(dt_).get());
 		if (global_time || (t + dt == t_ + dt_)) {
-			printf( "---%e %e\n", real(t + dt).get(), real(t_ + dt_).get());
 			t_ = t + dt;
 			for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 				primitive &W = (*state_ptr_)[I].W;
@@ -239,7 +237,7 @@ void tree::physical_bc_primitive() {
 					auto Ip = I;
 					Ip[dim]++;
 					auto &W = (*state_ptr_)[I].W;
-					(*state_ptr_)[I] = (*state_ptr_)[Ip];
+					W = (*state_ptr_)[Ip].W;
 					W.v[dim] = min(W.v[dim], real(0.0));
 				}
 			}
@@ -251,7 +249,7 @@ void tree::physical_bc_primitive() {
 					auto Im = I;
 					Im[dim]--;
 					auto &W = (*state_ptr_)[I].W;
-					(*state_ptr_)[I] = (*state_ptr_)[Im];
+					W = (*state_ptr_)[Im].W;
 					W.v[dim] = max(W.v[dim], real(0.0));
 				}
 
@@ -277,9 +275,11 @@ void tree::physical_bc_gradient() {
 				for (auto I = bc_vol.begin(); I != bc_vol.end(); bc_vol.inc_index((I))) {
 					auto Ip = I;
 					Ip[dim]++;
-					auto &dW = (*state_ptr_)[I].dW;
-					dW = (*state_ptr_)[Ip].dW;
-					dW[dim] = general_vect<real, NF>(0);
+					auto &S = (*state_ptr_)[I];
+					S.t = (*state_ptr_)[Ip].t;
+					S.dt = (*state_ptr_)[Ip].dt;
+					S.dW = (*state_ptr_)[Ip].dW;
+					S.dW[dim] = general_vect<real, NF>(0);
 				}
 			}
 			if (space_volume_.end(dim) == fixed_real(1.0)) {
@@ -289,9 +289,11 @@ void tree::physical_bc_gradient() {
 				for (auto I = bc_vol.begin(); I != bc_vol.end(); bc_vol.inc_index((I))) {
 					auto Im = I;
 					Im[dim]--;
-					auto &dW = (*state_ptr_)[I].dW;
-					dW = (*state_ptr_)[Im].dW;
-					dW[dim] = general_vect<real, NF>(0);
+					auto &S = (*state_ptr_)[I];
+					S.t = (*state_ptr_)[Im].t;
+					S.dt = (*state_ptr_)[Im].dt;
+					S.dW = (*state_ptr_)[Im].dW;
+					S.dW[dim] = general_vect<real, NF>(0);
 				}
 
 			}
