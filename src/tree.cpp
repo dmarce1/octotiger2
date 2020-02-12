@@ -241,7 +241,7 @@ void tree::physical_bc_primitive() {
 					auto Ip = I;
 					Ip[dim]++;
 					auto &W = (*state_ptr_)[I].W;
-					W = (*state_ptr_)[Ip].W;
+					(*state_ptr_)[I] = (*state_ptr_)[Ip];
 					W.v[dim] = min(W.v[dim], real(0.0));
 				}
 			}
@@ -253,7 +253,7 @@ void tree::physical_bc_primitive() {
 					auto Im = I;
 					Im[dim]--;
 					auto &W = (*state_ptr_)[I].W;
-					W = (*state_ptr_)[Im].W;
+					(*state_ptr_)[I] = (*state_ptr_)[Im];
 					W.v[dim] = max(W.v[dim], real(0.0));
 				}
 
