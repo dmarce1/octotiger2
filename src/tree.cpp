@@ -149,15 +149,18 @@ tree::tree(const volume<int> &vol, int lev, fixed_real t) :
 
 void tree::con_to_prim(fixed_real t, fixed_real dt) {
 	if (is_leaf()) {
-		if (global_time || t + dt == t_ + dt_) {
-
+		if (global_time || (t + dt == t_ + dt_)) {
+			if (global_time) {
+				t_ = t + dt;
+			} else {
+				t_ += dt_;
+			}
 			for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 				primitive &W = (*state_ptr_)[I].W;
 				const conserved &U = (*state_ptr_)[I].U;
 				W = U.to_prim();
 				(*state_ptr_)[I].t = t_;
 			}
-			t_ += dt_;
 		}
 	} else {
 		std::array<hpx::future<void>, NCHILD> futs;
@@ -308,7 +311,6 @@ void tree::update_con(fixed_real t, fixed_real dt) {
 	if (is_leaf()) {
 		primitive WR;
 		primitive WL;
-
 		for (int dim = 0; dim < NDIM; dim++) {
 			auto flux_volume = index_volume_;
 			flux_volume.end(dim)++;for
@@ -318,7 +320,7 @@ void tree::update_con(fixed_real t, fixed_real dt) {
 				IL[dim]--;
 				auto &R = (*state_ptr_)[IR];
 				auto &L = (*state_ptr_)[IL];
-				if (L.t + L.dt == t + dt || R.t + R.dt == t + dt || global_time) {
+				if ((L.t + L.dt == t + dt) || (R.t + R.dt == t + dt) || global_time) {
 					const auto this_dt = real(global_time ? dt : min(L.dt, R.dt));
 					WR = R.W;
 					WL = L.W;
