@@ -31,7 +31,7 @@ class tree: public hpx::components::component_base<tree> {
 
 	static int inx;
 	static bool global_time;
-	static fixed_real cfl;
+	static real cfl;
 	static int max_level;
 	static hpx::lcos::local::mutex mtx;
 	const static int bw;

@@ -16,7 +16,7 @@ HPX_REGISTER_COMPONENT(hpx::components::component<tree>, tree);
 int tree::inx;
 bool tree::global_time;
 int tree::max_level;
-fixed_real tree::cfl;
+real tree::cfl;
 const int tree::bw = 1;
 hpx::lcos::local::mutex tree::mtx;
 std::vector<std::shared_ptr<super_array<full_state>>> tree::data_arrays_;
@@ -149,17 +149,15 @@ tree::tree(const volume<int> &vol, int lev, fixed_real t) :
 
 void tree::con_to_prim(fixed_real t, fixed_real dt) {
 	if (is_leaf()) {
+		printf( "%e %e %e %e\n", real(t).get(), real(dt).get(), real(t_).get(), real(dt_).get());
 		if (global_time || (t + dt == t_ + dt_)) {
-			if (global_time) {
-				t_ = t + dt;
-			} else {
-				t_ += dt_;
-			}
+			printf( "---%e %e\n", real(t + dt).get(), real(t_ + dt_).get());
+			t_ = t + dt;
 			for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 				primitive &W = (*state_ptr_)[I].W;
 				const conserved &U = (*state_ptr_)[I].U;
 				W = U.to_prim();
-				(*state_ptr_)[I].t = t_;
+				(*state_ptr_)[I].t = t + dt;
 			}
 		}
 	} else {
@@ -201,14 +199,13 @@ void tree::gradients(fixed_real t) {
 }
 
 fixed_real tree::timestep(fixed_real t) {
-	dt_ = fixed_real::max();
 	if (is_leaf()) {
 		if (t == t_ || global_time) {
-
+			dt_ = fixed_real::max();
 			for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 				primitive W = (*state_ptr_)[I].W;
 				const auto vsig = W.signal_speed();
-				fixed_real dt = fixed_real(real(dx_) / vsig) * cfl;
+				fixed_real dt = real(dx_) / vsig * cfl;
 				dt_ = min(dt_, dt);
 			}
 			dt_ = dt_.nearest_log2();
@@ -222,6 +219,7 @@ fixed_real tree::timestep(fixed_real t) {
 		for (int ci = 0; ci < NCHILD; ci++) {
 			futs[ci] = hpx::async<timestep_action>(children_[ci], t);
 		}
+		dt_ = fixed_real::max();
 		for (int ci = 0; ci < NCHILD; ci++) {
 			dt_ = min(dt_, futs[ci].get());
 		}
