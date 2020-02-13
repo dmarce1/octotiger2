@@ -19,6 +19,7 @@ int hpx_main(int argc, char *argv[]) {
 	while (tree::check_for_refine_action()(root, 0.0)) {
 		tree::set_initial_conditions_action()(root);
 	}
+	tree::find_family_action()(root, hpx::invalid_id, root, std::vector<hpx::id_type>(NSIBLING, hpx::invalid_id));
 	tree::con_to_prim_action()(root, 0.0, 0.0);
 	tree::physical_bc_primitive_action()(root);
 	tree::gradients_action()(root, 0.0);
@@ -32,6 +33,9 @@ int hpx_main(int argc, char *argv[]) {
 	printf("Starting main execution loop...\n");
 	while (t < fixed_real(opts.tmax)) {
 		fixed_real dt = tree::timestep_action()(root, t);
+		while (tree::adjust_dt_action()(root, t)) {
+			NULL;
+		}
 		printf("%i %e %e\n", step, (double) t, (double) dt);
 		tree::physical_bc_gradient_action()(root);
 		tree::update_con_action()(root, t, dt);

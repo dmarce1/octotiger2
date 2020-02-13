@@ -54,6 +54,8 @@ class tree: public hpx::components::component_base<tree> {
 
 	std::atomic<int> refinement_flag;
 
+	mutable hpx::lcos::local::mutex mtx_;
+
 	void initialize();
 
 public:
@@ -77,12 +79,23 @@ public:
 		return x;
 	}
 
+	void load_times();
+
 	void set_as_root();
 	HPX_DEFINE_COMPONENT_ACTION(tree, set_as_root);
 
 	void create_children();
 
 	static void static_init();
+
+	bool adjust_dt(fixed_real);
+	HPX_DEFINE_COMPONENT_ACTION(tree, adjust_dt);
+
+	fixed_real get_dt() const {
+		std::lock_guard<hpx::lcos::local::mutex> lock(mtx_);
+		return dt_;
+	}
+	HPX_DEFINE_COMPONENT_ACTION(tree, get_dt);
 
 	std::vector<real> get_prolong_con();
 	void set_con(const std::vector<real>&);

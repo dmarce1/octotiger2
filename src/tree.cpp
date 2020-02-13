@@ -75,44 +75,42 @@ node_attr tree::get_node_attributes() const {
 	return a;
 }
 
-void tree::find_family(hpx::id_type parent, hpx::id_type self, std::vector<hpx::id_type> pot_neighbors) {
+void tree::find_family(hpx::id_type parent, hpx::id_type self, std::vector<hpx::id_type> neighbors) {
 	parent_ = parent;
 	self_ = self;
-	neighbors_ = std::move(pot_neighbors);
-	std::vector<hpx::future<node_attr>> nfuts(neighbors_.size());
-	for (std::size_t i = 0; i < neighbors_.size(); i++) {
-		nfuts[i] = hpx::async<get_node_attributes_action>(neighbors_[i]);
-	}
-	for (std::size_t i = 0; i < neighbors_.size(); i++) {
-		neighbor_attr_[i] = nfuts[i].get();
-	}
-	int i = 0;
-	while (i < neighbors_.size()) {
-		if (!space_volume_.intersects(neighbor_attr_[i].space_volume) && (neighbor_attr_[i].space_volume != space_volume_)) {
-			const auto sz = neighbors_.size() - 1;
-			neighbors_[i] = neighbors_[sz];
-			neighbor_attr_[i] = neighbor_attr_[sz];
-			neighbors_.resize(sz);
-			neighbor_attr_.resize(sz);
-		} else {
-			i++;
-		}
-	}
+	neighbors_ = std::move(neighbors);
+	std::array<hpx::future<std::vector<hpx::id_type>>, NSIBLING> ncfuts;
+	std::array<std::vector<hpx::id_type>, NSIBLING> nchildren;
 	if (!is_leaf()) {
-		pot_neighbors = children_;
-		std::vector<hpx::future<std::vector<hpx::id_type>>> cfuts(neighbors_.size());
-		for (std::size_t i = 0; i < neighbors_.size(); i++) {
-			cfuts[i] = hpx::async<get_children_action>(neighbors_[i]);
+		for (int si = 0; si < NSIBLING; si++) {
+			if (neighbors_[si] != hpx::invalid_id) {
+				ncfuts[si] = hpx::async<get_children_action>(neighbors_[si]);
+			} else {
+				ncfuts[si] = hpx::make_ready_future(std::vector<hpx::id_type>());
+			}
 		}
-		for (std::size_t i = 0; i < neighbors_.size(); i++) {
-			auto tmp = cfuts[i].get();
-			pot_neighbors.insert(tmp.begin(), tmp.end(), pot_neighbors.end());
+		for (int si = 0; si < NSIBLING; si++) {
+			nchildren[si] = ncfuts[si].get();
+			if (nchildren[si].empty()) {
+				nchildren[si] = std::vector<hpx::id_type>(NCHILD, hpx::invalid_id);
+			}
 		}
-		std::array<hpx::future<void>, NCHILD> futs;
+		std::array<hpx::future<void>, NCHILD> cfuts;
 		for (int ci = 0; ci < NCHILD; ci++) {
-			futs[ci] = hpx::async<find_family_action>(children_[ci], self_, children_[ci], pot_neighbors);
+			std::vector<hpx::id_type> cneighbors(NSIBLING);
+			for (int dim = 0; dim < NDIM; dim++) {
+				const auto ci0 = ci ^ (1 << dim);
+				if (((ci >> dim) & 1) == 0) {
+					cneighbors[2 * dim + 0] = nchildren[2 * dim + 0][ci0];
+					cneighbors[2 * dim + 1] = children_[ci0];
+				} else {
+					cneighbors[2 * dim + 0] = children_[ci0];
+					cneighbors[2 * dim + 1] = nchildren[2 * dim + 1][ci0];
+				}
+			}
+			cfuts[ci] = hpx::async<find_family_action>(children_[ci], self, children_[ci], cneighbors);
 		}
-		hpx::wait_all(futs.begin(), futs.end());
+		hpx::wait_all(cfuts.begin(), cfuts.end());
 	}
 }
 
@@ -196,6 +194,12 @@ void tree::gradients(fixed_real t) {
 	}
 }
 
+void tree::load_times() {
+	for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
+		(*state_ptr_)[I].dt = dt_;
+	}
+}
+
 fixed_real tree::timestep(fixed_real t) {
 	if (is_leaf()) {
 		if (t == t_ || global_time) {
@@ -208,9 +212,7 @@ fixed_real tree::timestep(fixed_real t) {
 			}
 			dt_ = dt_.nearest_log2();
 			dt_ = min(dt_, t.next_bin() - t);
-			for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
-				(*state_ptr_)[I].dt = dt_;
-			}
+			load_times();
 		}
 	} else {
 		std::array<hpx::future<fixed_real>, NCHILD> futs;
@@ -321,15 +323,15 @@ void tree::update_con(fixed_real t, fixed_real dt) {
 				auto &R = (*state_ptr_)[IR];
 				auto &L = (*state_ptr_)[IL];
 				if ((L.t + L.dt == t + dt) || (R.t + R.dt == t + dt) || global_time) {
-					const auto this_dt = real(global_time ? dt : min(L.dt, R.dt));
+					const auto this_dt = global_time ? dt : min(L.dt, R.dt);
 					WR = R.W;
 					WL = L.W;
 					WR = WR - R.dW[dim]* 0.5;
 					WL = WL + L.dW[dim]* 0.5;
-					WR = WR + R.dWdt() * this_dt * 0.5;
-					WL = WL + L.dWdt() * this_dt * 0.5;
+					WR = WR + R.dWdt() * real(this_dt + t - R.t) * 0.5;
+					WL = WL + L.dWdt() * real(this_dt + t - L.t) * 0.5;
 					const auto F = riemann_solver(WL, WR, dim);
-					const auto dU = F * (this_dt / real(dx_));
+					const auto dU = F * (real(this_dt) / real(dx_));
 					if (index_volume_.contains(IR)) {
 						R.U = R.U + dU;
 					}
@@ -437,3 +439,38 @@ bool tree::check_for_refine(fixed_real t) {
 	return rc;
 }
 
+bool tree::adjust_dt(fixed_real t) {
+	bool rc = false;
+	if (is_leaf()) {
+		if (t_ == t) {
+			std::array<hpx::future<fixed_real>, NSIBLING> dtfuts;
+			for (int si = 0; si < NSIBLING; si++) {
+				if (neighbors_[si] != hpx::invalid_id) {
+					dtfuts[si] = hpx::async<get_dt_action>(neighbors_[si]);
+				} else {
+					dtfuts[si] = hpx::make_ready_future(fixed_real::max() / fixed_real(2));
+				}
+			}
+			for (int si = 0; si < NSIBLING; si++) {
+				const auto max_dt = fixed_real(2) * dtfuts[si].get();
+				if (dt_ > max_dt) {
+					{
+						std::lock_guard<hpx::lcos::local::mutex> lock(mtx_);
+						dt_ = max_dt;
+					}
+					rc = true;
+				}
+			}
+			load_times();
+		}
+	} else {
+		std::array<hpx::future<bool>, NCHILD> futs;
+		for (int ci = 0; ci < NCHILD; ci++) {
+			futs[ci] = hpx::async<adjust_dt_action>(children_[ci], t);
+		}
+		for (int ci = 0; ci < NCHILD; ci++) {
+			rc = futs[ci].get() || rc;
+		}
+	}
+	return rc;
+}
