@@ -324,11 +324,11 @@ void tree::physical_bc_gradient() {
 
 void tree::update_con(fixed_real t, fixed_real dt) {
 	if (is_leaf()) {
-		primitive WR;
-		primitive WL;
 		for (int dim = 0; dim < NDIM; dim++) {
 			auto flux_volume = index_volume_;
-			flux_volume.end(dim)++;for
+			flux_volume.end(dim)++;/**/
+
+			for
 (			auto I = flux_volume.begin(); I != flux_volume.end(); flux_volume.inc_index(I)) {
 				const auto &IR = I;
 				auto IL = I;
@@ -337,13 +337,7 @@ void tree::update_con(fixed_real t, fixed_real dt) {
 				auto &L = (*state_ptr_)[IL];
 				if ((L.t + L.dt == t + dt) || (R.t + R.dt == t + dt) || global_time) {
 					const auto this_dt = global_time ? dt : min(L.dt, R.dt);
-					WR = R.W;
-					WL = L.W;
-					WR = WR - R.dW[dim]* 0.5;
-					WL = WL + L.dW[dim]* 0.5;
-					WR = WR + R.dWdt() * real(this_dt + t - R.t) * 0.5;
-					WL = WL + L.dWdt() * real(this_dt + t - L.t) * 0.5;
-					const auto F = riemann_solver(WL, WR, dim);
+					const auto& F = (*flux_ptr_[dim])[I];
 					const auto dU = F * (real(this_dt) / real(dx_));
 					if (index_volume_.contains(IR)) {
 						R.U = R.U + dU;
@@ -360,6 +354,42 @@ void tree::update_con(fixed_real t, fixed_real dt) {
 			futs[ci] = hpx::async<update_con_action>(children_[ci], t, dt);
 		}
 		hpx::wait_all(futs.begin(),futs.end());
+	}
+}
+
+void tree::compute_fluxes(fixed_real t, fixed_real dt) {
+	if (is_leaf()) {
+		primitive WR;
+		primitive WL;
+		for (int dim = 0; dim < NDIM; dim++) {
+			auto flux_volume = index_volume_;
+			if (neighbors_[2 * dim + 1] == hpx::invalid_id) {
+				flux_volume.end(dim)++;}
+			for (auto I = flux_volume.begin(); I != flux_volume.end(); flux_volume.inc_index(I)) {
+				const auto &IR = I;
+				auto IL = I;
+				IL[dim]--;
+				auto &R = (*state_ptr_)[IR];
+				auto &L = (*state_ptr_)[IL];
+				if ((L.t + L.dt == t + dt) || (R.t + R.dt == t + dt) || global_time) {
+					const auto this_dt = global_time ? dt : min(L.dt, R.dt);
+					WR = R.W;
+					WL = L.W;
+					WR = WR - R.dW[dim] * 0.5;
+					WL = WL + L.dW[dim] * 0.5;
+					WR = WR + R.dWdt() * real(this_dt + t - R.t) * 0.5;
+					WL = WL + L.dWdt() * real(this_dt + t - L.t) * 0.5;
+					auto &F = (*flux_ptr_[dim])[I];
+					F = riemann_solver(WL, WR, dim);
+				}
+			}
+		}
+	} else {
+		std::array<hpx::future<void>, NCHILD> futs;
+		for (int ci = 0; ci < NCHILD; ci++) {
+			futs[ci] = hpx::async<compute_fluxes_action>(children_[ci], t, dt);
+		}
+		hpx::wait_all(futs.begin(), futs.end());
 	}
 }
 

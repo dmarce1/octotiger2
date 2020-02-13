@@ -25,7 +25,7 @@ static auto blast(const vect &x) {
 	conserved U;
 	U.S = vect(0);
 	U.D = 1.0;
-	U.E = max(1.0e-10, exp(-500.0 * x.dot(x)));
+	U.E = max(1.0e-10, exp(-10000.0 * x.dot(x)));
 	return U;
 }
 

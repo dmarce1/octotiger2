@@ -38,6 +38,7 @@ int hpx_main(int argc, char *argv[]) {
 		}
 		printf("%i %e %e\n", step, (double) t, (double) dt);
 		tree::physical_bc_gradient_action()(root);
+		tree::compute_fluxes_action()(root, t, dt);
 		tree::update_con_action()(root, t, dt);
 		tree::con_to_prim_action()(root, t, dt);
 		t += dt;

@@ -275,5 +275,6 @@ conserved kurganov_tadmor(const primitive &WL, const primitive &WR, int dim) {
 }
 
 conserved riemann_solver(const primitive &WL, const primitive &WR, int dim) {
+//	return kurganov_tadmor(WL, WR, dim);
 	return exact_riemann(WL, WR, dim);
 }
