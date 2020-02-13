@@ -20,6 +20,7 @@ real tree::cfl;
 const int tree::bw = 1;
 hpx::lcos::local::mutex tree::mtx;
 std::vector<std::shared_ptr<super_array<full_state>>> tree::data_arrays_;
+std::array<std::vector<std::shared_ptr<super_array<conserved>>>, NDIM> tree::flux_arrays_;
 
 void tree::static_init() {
 	const auto opts = options::get();
@@ -41,14 +42,26 @@ void tree::initialize() {
 		std::lock_guard<hpx::lcos::local::mutex> lock(mtx);
 		if (level_ >= data_arrays_.size()) {
 			data_arrays_.resize(level_ + 1);
+			for (int dim = 0; dim < NDIM; dim++) {
+				flux_arrays_[dim].resize(level_ + 1);
+			}
 		}
 		if (data_arrays_[level_] == nullptr) {
 			data_arrays_[level_] = std::make_shared<super_array<full_state>>();
+			for (int dim = 0; dim < NDIM; dim++) {
+				flux_arrays_[dim][level_] = std::make_shared<super_array<conserved>>();
+			}
 		}
 	}
 	state_ptr_ = data_arrays_[level_];
 	const auto vol = index_volume_.expand(bw);
 	state_ptr_->add_volume(vol);
+	for (int dim = 0; dim < NDIM; dim++) {
+		auto vol = index_volume_;
+		vol.end()[dim]++;
+		flux_ptr_[dim] = flux_arrays_[dim][level_];
+		flux_ptr_[dim]->add_volume(vol);
+	}
 	refinement_flag = 0;
 }
 

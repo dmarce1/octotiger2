@@ -36,6 +36,7 @@ class tree: public hpx::components::component_base<tree> {
 	static hpx::lcos::local::mutex mtx;
 	const static int bw;
 	static std::vector<std::shared_ptr<super_array<full_state>>> data_arrays_;
+	static std::array<std::vector<std::shared_ptr<super_array<conserved>>>, NDIM> flux_arrays_;
 
 	volume<int> index_volume_;
 	volume<fixed_real> space_volume_;
@@ -45,6 +46,7 @@ class tree: public hpx::components::component_base<tree> {
 	fixed_real dt_;
 
 	std::shared_ptr<super_array<full_state>> state_ptr_;
+	std::array<std::shared_ptr<super_array<conserved>>,NDIM> flux_ptr_;
 
 	hpx::id_type parent_;
 	hpx::id_type self_;
@@ -81,15 +83,13 @@ public:
 
 	void load_times();
 
-	void set_as_root();
-	HPX_DEFINE_COMPONENT_ACTION(tree, set_as_root);
+	void set_as_root();HPX_DEFINE_COMPONENT_ACTION(tree, set_as_root);
 
 	void create_children();
 
 	static void static_init();
 
-	bool adjust_dt(fixed_real);
-	HPX_DEFINE_COMPONENT_ACTION(tree, adjust_dt);
+	bool adjust_dt(fixed_real);HPX_DEFINE_COMPONENT_ACTION(tree, adjust_dt);
 
 	fixed_real get_dt() const {
 		std::lock_guard<hpx::lcos::local::mutex> lock(mtx_);
@@ -98,45 +98,31 @@ public:
 	HPX_DEFINE_COMPONENT_ACTION(tree, get_dt);
 
 	std::vector<real> get_prolong_con();
-	void set_con(const std::vector<real>&);
-	HPX_DEFINE_COMPONENT_ACTION(tree, set_con);
+	void set_con(const std::vector<real>&);HPX_DEFINE_COMPONENT_ACTION(tree, set_con);
 
-	void set_initial_conditions();
-	HPX_DEFINE_COMPONENT_ACTION(tree, set_initial_conditions);
+	void set_initial_conditions();HPX_DEFINE_COMPONENT_ACTION(tree, set_initial_conditions);
 
-	fixed_real timestep(fixed_real);
-	HPX_DEFINE_COMPONENT_ACTION(tree,timestep);
+	fixed_real timestep(fixed_real);HPX_DEFINE_COMPONENT_ACTION(tree,timestep);
 
-	void con_to_prim(fixed_real, fixed_real);
-	HPX_DEFINE_COMPONENT_ACTION(tree, con_to_prim);
+	void con_to_prim(fixed_real, fixed_real);HPX_DEFINE_COMPONENT_ACTION(tree, con_to_prim);
 
-	void gradients(fixed_real t);
-	HPX_DEFINE_COMPONENT_ACTION(tree, gradients);
+	void gradients(fixed_real t);HPX_DEFINE_COMPONENT_ACTION(tree, gradients);
 
-	void physical_bc_primitive();
-	HPX_DEFINE_COMPONENT_ACTION(tree,physical_bc_primitive);
+	void physical_bc_primitive();HPX_DEFINE_COMPONENT_ACTION(tree,physical_bc_primitive);
 
-	void physical_bc_gradient();
-	HPX_DEFINE_COMPONENT_ACTION(tree,physical_bc_gradient);
+	void physical_bc_gradient();HPX_DEFINE_COMPONENT_ACTION(tree,physical_bc_gradient);
 
-	void update_con(fixed_real, fixed_real);
-	HPX_DEFINE_COMPONENT_ACTION(tree, update_con);
+	void update_con(fixed_real, fixed_real);HPX_DEFINE_COMPONENT_ACTION(tree, update_con);
 
-	void send_silo();
-	HPX_DEFINE_COMPONENT_ACTION(tree, send_silo);
+	void send_silo();HPX_DEFINE_COMPONENT_ACTION(tree, send_silo);
 
-	node_attr get_node_attributes() const;
-	HPX_DEFINE_COMPONENT_ACTION(tree, get_node_attributes);
+	node_attr get_node_attributes() const;HPX_DEFINE_COMPONENT_ACTION(tree, get_node_attributes);
 
-	void find_family(hpx::id_type, hpx::id_type, std::vector<hpx::id_type>);
-	HPX_DEFINE_COMPONENT_ACTION(tree,find_family);
+	void find_family(hpx::id_type, hpx::id_type, std::vector<hpx::id_type>);HPX_DEFINE_COMPONENT_ACTION(tree,find_family);
 
-	std::vector<hpx::id_type> get_children() const;
-	HPX_DEFINE_COMPONENT_ACTION(tree, get_children);
+	std::vector<hpx::id_type> get_children() const;HPX_DEFINE_COMPONENT_ACTION(tree, get_children);
 
-	bool check_for_refine(fixed_real t);
-	HPX_DEFINE_COMPONENT_ACTION(tree, check_for_refine);
-
+	bool check_for_refine(fixed_real t);HPX_DEFINE_COMPONENT_ACTION(tree, check_for_refine);
 
 };
 
