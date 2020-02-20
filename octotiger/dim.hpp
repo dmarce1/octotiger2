@@ -11,7 +11,7 @@
 #include <cmath>
 
 
-#define NDIM 2
+#define NDIM 3
 
 static constexpr auto NCHILD = (1 << NDIM);
 static constexpr auto NSIBLING = (2 * NDIM);

@@ -90,8 +90,8 @@ void silo_end(const std::string &fname, fixed_real t) {
 		const int shapetypes[1] = {DB_ZONETYPE_BEAM};
 #elif( NDIM ==2)
 	const int shapetypes[1] = { DB_ZONETYPE_QUAD };
-#elif(NDIM==1)
-		const int shapetypes[1] = { DB_ZONETYPE_HEX };
+#elif(NDIM==3)
+	const int shapetypes[1] = { DB_ZONETYPE_HEX };
 #else
 #error
 #endif
