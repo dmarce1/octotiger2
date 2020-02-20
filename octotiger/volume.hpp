@@ -121,15 +121,23 @@ public:
 		return !(*this == other);
 	}
 
-	general_vect<T, NDIM> begin() const {
+	const general_vect<T, NDIM>& begin() const {
 		return begin_;
 	}
 
-	general_vect<T, NDIM> end() const {
+	const general_vect<T, NDIM>& end() const {
 		return end_;
 	}
 
-	bool contains(const general_vect<T, NDIM> &pt) {
+	general_vect<T, NDIM>& begin() {
+		return begin_;
+	}
+
+	general_vect<T, NDIM>& end() {
+		return end_;
+	}
+
+	bool contains(const general_vect<T, NDIM> &pt) const {
 		bool rc = true;
 		for (int dim = 0; dim < NDIM; dim++) {
 			if (pt[dim] < begin_[dim]) {

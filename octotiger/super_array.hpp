@@ -66,11 +66,15 @@ public:
 	}
 
 	const T& operator[](const index_type& I) const {
-		return data_[volume_.index(I)];
+		assert(volume_.contains(I));
+		const auto i = volume_.index(I);
+		return data_[i];
 	}
 
 	T& operator[](const index_type& I) {
-		return data_[volume_.index(I)];
+		assert(volume_.contains(I));
+		const auto i = volume_.index(I);
+		return data_[i];
 	}
 
 };
