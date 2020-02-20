@@ -15,12 +15,12 @@ int hpx_main(int argc, char *argv[]) {
 
 	auto root = hpx::new_<tree>(hpx::find_here()).get();
 	tree::set_as_root_action()(root);
-	tree::set_initial_conditions_action()(root);
-	while (tree::check_for_refine_action()(root, 0.0)) {
+	do {
 		tree::set_initial_conditions_action()(root);
-	}
-	tree::find_family_action()(root, hpx::invalid_id, root, std::vector<hpx::id_type>(NSIBLING, hpx::invalid_id));
-	tree::con_to_prim_action()(root, 0.0, 0.0);
+		tree::find_family_action()(root, hpx::invalid_id, root, std::vector<hpx::id_type>(NSIBLING, hpx::invalid_id));
+		tree::con_to_prim_action()(root, 0.0, 0.0);
+		tree::physical_bc_primitive_action()(root);
+	} while (tree::check_for_refine_action()(root, 0.0));
 	tree::physical_bc_primitive_action()(root);
 	tree::gradients_action()(root, 0.0);
 	silo_begin();
