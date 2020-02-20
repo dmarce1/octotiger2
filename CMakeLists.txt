@@ -31,7 +31,8 @@ set(octotiger2_source_files
     src/refinements.cpp
     src/riemann.cpp
     src/silo.cpp
-	src/tree.cpp
+	src/tree/tree_hydro.cpp
+	src/tree/tree_infrastructure.cpp
 )
 
 set(octotiger2_header_files

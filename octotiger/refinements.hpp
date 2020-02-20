@@ -13,7 +13,7 @@
 
 #include <functional>
 
-using refinement_func = std::function<bool(const full_state&)>;
+using refinement_func = std::function<bool(const primitive&, const gradient&)>;
 
 refinement_func  get_refinement_function();
 
