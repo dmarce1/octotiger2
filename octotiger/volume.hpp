@@ -30,6 +30,30 @@ public:
 		}
 	}
 
+	volume<T> double_() const {
+		volume<T> v;
+		for( int dim = 0; dim < NDIM; dim++) {
+			v.begin_[dim] = 2 * begin_[dim];
+			v.end_[dim] = 2 * end_[dim];
+		}
+		return v;
+	}
+
+	volume<T> half() const {
+		volume<T> v;
+		for( int dim = 0; dim < NDIM; dim++) {
+			v.begin_[dim] = begin_[dim] / 2;
+			if( begin_[dim] % 2 < 0) {
+				v.begin_[dim]--;
+			}
+			v.end_[dim] = end_[dim] / 2;
+			if( end_[dim] % 2 < 0) {
+				v.end_[dim]--;
+			}
+		}
+		return v;
+	}
+
 	bool empty() const {
 		bool rc = false;
 		for (int dim = 0; dim < NDIM; dim++) {

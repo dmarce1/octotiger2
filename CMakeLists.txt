@@ -48,6 +48,7 @@ set(octotiger2_header_files
     octotiger/refinements.hpp
     octotiger/riemann.hpp
     octotiger/silo.hpp
+    octotiger/sub_array.hpp
 	octotiger/super_array.hpp
 	octotiger/tree.hpp
     octotiger/vect.hpp

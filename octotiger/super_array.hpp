@@ -8,14 +8,12 @@
 #ifndef OCTOTIGER_SUPER_ARRAY_HPP_
 #define OCTOTIGER_SUPER_ARRAY_HPP_
 
-#include <octotiger/volume.hpp>
+#include <octotiger/sub_array.hpp>
 
 #include <hpx/lcos/local/mutex.hpp>
 
-#include <cassert>
 #include <set>
 
-using index_type = general_vect<int,NDIM>;
 
 template<class T>
 class super_array {
@@ -65,13 +63,13 @@ public:
 		resize(new_volume);
 	}
 
-	const T& operator[](const index_type& I) const {
+	const T& operator[](const index_type &I) const {
 		assert(volume_.contains(I));
 		const auto i = volume_.index(I);
 		return data_[i];
 	}
 
-	T& operator[](const index_type& I) {
+	T& operator[](const index_type &I) {
 		assert(volume_.contains(I));
 		const auto i = volume_.index(I);
 		return data_[i];

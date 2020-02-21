@@ -53,6 +53,7 @@ class tree: public hpx::components::component_base<tree> {
 	std::vector<hpx::id_type> children_;
 	std::vector<hpx::id_type> neighbors_;
 	std::vector<node_attr> neighbor_attr_;
+	std::vector<node_attr> children_attr_;
 
 	std::atomic<int> refinement_flag;
 

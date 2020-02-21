@@ -100,6 +100,10 @@ void tree::find_family(hpx::id_type parent, hpx::id_type self, std::vector<hpx::
 		}
 	}
 	if (!is_leaf()) {
+		std::array<hpx::future<node_attr>, NCHILD> acfuts;
+		for( int ci = 0; ci < NCHILD; ci++) {
+			acfuts[ci] = hpx::async<get_node_attributes_action>(children_[ci]);
+		}
 		for (int si = 0; si < NSIBLING; si++) {
 			if (neighbors_[si] != hpx::invalid_id) {
 				ncfuts[si] = hpx::async<get_children_action>(neighbors_[si]);
@@ -127,6 +131,9 @@ void tree::find_family(hpx::id_type parent, hpx::id_type self, std::vector<hpx::
 				}
 			}
 			cfuts[ci] = hpx::async<find_family_action>(children_[ci], self, children_[ci], cneighbors);
+		}
+		for( int ci = 0; ci < NCHILD; ci++) {
+			children_attr_[ci] = acfuts[ci].get();
 		}
 		hpx::wait_all(cfuts.begin(), cfuts.end());
 	}
@@ -255,11 +262,13 @@ std::vector<primitive> tree::get_prim(const volume<int> &volume) const {
 	std::vector<primitive> W;
 	assert(index_volume_.contains(volume));
 	for (auto I = volume.begin(); I != volume.end(); volume.inc_index(I)) {
-
+		W.push_back((*state_ptr_)[I].W);
 	}
+	return W;
 }
 
-std::vector<primitive> tree::get_prim_from_children(const volume<int>&) const {
+std::vector<primitive> tree::get_prim_from_children(const volume<int>& vol) const {
+	std::vector<primitive> W;
 
 }
 
