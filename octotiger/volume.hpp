@@ -137,6 +137,21 @@ public:
 		return end_;
 	}
 
+	bool contains(const volume<T> &other) const {
+		bool rc = true;
+		for (int dim = 0; dim < NDIM; dim++) {
+			if (!contains(other.begin_[dim])) {
+				rc = false;
+				break;
+			}
+			if (!contains(other.end_[dim])) {
+				rc = false;
+				break;
+			}
+		}
+		return rc;
+	}
+
 	bool contains(const general_vect<T, NDIM> &pt) const {
 		bool rc = true;
 		for (int dim = 0; dim < NDIM; dim++) {
@@ -170,7 +185,7 @@ public:
 		return i;
 	}
 
-	void inc_index(general_vect<T, NDIM> &I) {
+	void inc_index(general_vect<T, NDIM> &I) const {
 		int dim = 0;
 		while (++I[dim] == end(dim)) {
 			if (dim != NDIM - 1) {

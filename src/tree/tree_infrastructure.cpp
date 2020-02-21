@@ -82,17 +82,23 @@ void tree::set_as_root() {
 node_attr tree::get_node_attributes() const {
 	node_attr a;
 	a.leaf = is_leaf();
-	a.space_volume = space_volume_;
+	a.index_volume = index_volume_;
 	a.locality = hpx::find_here();
 	return a;
 }
 
 void tree::find_family(hpx::id_type parent, hpx::id_type self, std::vector<hpx::id_type> neighbors) {
 	parent_ = parent;
-	self_ = self;
-	neighbors_ = std::move(neighbors);
+	std::array<hpx::future<node_attr>, NSIBLING> afuts;
 	std::array<hpx::future<std::vector<hpx::id_type>>, NSIBLING> ncfuts;
 	std::array<std::vector<hpx::id_type>, NSIBLING> nchildren;
+	self_ = self;
+	neighbors_ = std::move(neighbors);
+	for (int si = 0; si < NSIBLING; si++) {
+		if (neighbors_[si] != hpx::invalid_id) {
+			afuts[si] = hpx::async<get_node_attributes_action>(neighbors_[si]);
+		}
+	}
 	if (!is_leaf()) {
 		for (int si = 0; si < NSIBLING; si++) {
 			if (neighbors_[si] != hpx::invalid_id) {
@@ -123,6 +129,11 @@ void tree::find_family(hpx::id_type parent, hpx::id_type self, std::vector<hpx::
 			cfuts[ci] = hpx::async<find_family_action>(children_[ci], self, children_[ci], cneighbors);
 		}
 		hpx::wait_all(cfuts.begin(), cfuts.end());
+	}
+	for (int si = 0; si < NSIBLING; si++) {
+		if (neighbors_[si] != hpx::invalid_id) {
+			neighbor_attr_[si] = afuts[si].get();
+		}
 	}
 }
 
@@ -155,29 +166,6 @@ void tree::create_children() {
 tree::tree(const volume<int> &vol, int lev, fixed_real t) :
 		index_volume_(vol), level_(lev), t_(t) {
 	initialize();
-}
-
-std::vector<real> tree::get_prolong_con() {
-	std::vector<real> data;
-
-	for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
-		const auto &U = (*state_ptr_)[I].U;
-		for (int f = 0; f < NF; f++) {
-			data.push_back(U[f]);
-		}
-	}
-	return data;
-}
-
-void tree::set_con(const std::vector<real> &data) {
-	int i = 0;
-
-	for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
-		auto &U = (*state_ptr_)[I].U;
-		for (int f = 0; f < NF; f++) {
-			U[f] = data[i++];
-		}
-	}
 }
 
 void tree::set_initial_conditions() {
@@ -262,3 +250,20 @@ bool tree::check_for_refine(fixed_real t) {
 	}
 	return rc;
 }
+
+std::vector<primitive> tree::get_prim(const volume<int> &volume) const {
+	std::vector<primitive> W;
+	assert(index_volume_.contains(volume));
+	for (auto I = volume.begin(); I != volume.end(); volume.inc_index(I)) {
+
+	}
+}
+
+std::vector<primitive> tree::get_prim_from_children(const volume<int>&) const {
+
+}
+
+std::vector<primitive> tree::get_prim_from_neighbor(const volume<int>&) const {
+
+}
+
