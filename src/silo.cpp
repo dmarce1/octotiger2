@@ -18,7 +18,11 @@ struct node_hash {
 	std::size_t operator()(const node_type &n) const {
 		std::size_t key = 0;
 		for (int dim = 0; dim < NDIM; dim++) {
-			key ^= std::hash<std::uint64_t>()(n[dim].get_int());
+			const auto i = std::hash<std::uint64_t>()(n[dim].get_int());
+			key ^= i % 194859384731;
+			key ^= i % 74985482;
+			key ^= i % 4121;
+			key ^= i;
 		}
 		return key;
 	}
