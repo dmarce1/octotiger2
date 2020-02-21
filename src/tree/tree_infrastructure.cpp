@@ -19,6 +19,11 @@ real tree::cfl;
 const int tree::bw = 1;
 hpx::lcos::local::mutex tree::mtx;
 std::vector<std::shared_ptr<super_array<full_state>>> tree::data_arrays_;
+std::vector<std::shared_ptr<super_array<conserved>>> tree::U_arrays_;
+std::vector<std::shared_ptr<super_array<primitive>>> tree::W_arrays_;
+std::vector<std::shared_ptr<super_array<gradient>>> tree::dW_arrays_;
+std::vector<std::shared_ptr<super_array<fixed_real>>> tree::t_arrays_;
+std::vector<std::shared_ptr<super_array<fixed_real>>> tree::dt_arrays_;
 std::array<std::vector<std::shared_ptr<super_array<conserved>>>, NDIM> tree::flux_arrays_;
 
 void tree::static_init() {
@@ -39,22 +44,42 @@ void tree::initialize() {
 	dt_ = 0.0;
 	{
 		std::lock_guard<hpx::lcos::local::mutex> lock(mtx);
-		if (level_ >= data_arrays_.size()) {
+		if (level_ >= W_arrays_.size()) {
 			data_arrays_.resize(level_ + 1);
+			W_arrays_.resize(level_ + 1);
+			dW_arrays_.resize(level_ + 1);
+			U_arrays_.resize(level_ + 1);
+			t_arrays_.resize(level_ + 1);
+			dt_arrays_.resize(level_ + 1);
 			for (int dim = 0; dim < NDIM; dim++) {
 				flux_arrays_[dim].resize(level_ + 1);
 			}
 		}
-		if (data_arrays_[level_] == nullptr) {
+		if (W_arrays_[level_] == nullptr) {
 			data_arrays_[level_] = std::make_shared<super_array<full_state>>();
+			W_arrays_[level_] = std::make_shared<super_array<primitive>>();
+			dW_arrays_[level_] = std::make_shared<super_array<gradient>>();
+			U_arrays_[level_] = std::make_shared<super_array<conserved>>();
+			t_arrays_[level_] = std::make_shared<super_array<fixed_real>>();
+			dt_arrays_[level_] = std::make_shared<super_array<fixed_real>>();
 			for (int dim = 0; dim < NDIM; dim++) {
 				flux_arrays_[dim][level_] = std::make_shared<super_array<conserved>>();
 			}
 		}
 	}
 	state_ptr_ = data_arrays_[level_];
+	W_ptr_ = W_arrays_[level_];
+	dW_ptr_ = dW_arrays_[level_];
+	U_ptr_ = U_arrays_[level_];
+	t_ptr_ = t_arrays_[level_];
+	dt_ptr_ = dt_arrays_[level_];
 	const auto vol = index_volume_.expand(bw);
 	state_ptr_->add_volume(vol);
+	W_ptr_->add_volume(vol);
+	dW_ptr_->add_volume(vol);
+	U_ptr_->add_volume(vol);
+	t_ptr_->add_volume(vol);
+	dt_ptr_->add_volume(vol);
 	for (int dim = 0; dim < NDIM; dim++) {
 		auto vol = index_volume_;
 		vol.end()[dim]++;

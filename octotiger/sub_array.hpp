@@ -14,6 +14,8 @@
 
 using index_type = general_vect<int,NDIM>;
 
+template<class T>
+class super_array;
 
 template<class T>
 class sub_array {
@@ -39,6 +41,7 @@ public:
 		const auto i = volume_.index(I);
 		return data_[i];
 	}
+	friend class super_array<T>;
 };
 
 

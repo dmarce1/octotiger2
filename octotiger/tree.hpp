@@ -36,6 +36,11 @@ class tree: public hpx::components::component_base<tree> {
 	static hpx::lcos::local::mutex mtx;
 	const static int bw;
 	static std::vector<std::shared_ptr<super_array<full_state>>> data_arrays_;
+	static std::vector<std::shared_ptr<super_array<conserved>>> U_arrays_;
+	static std::vector<std::shared_ptr<super_array<primitive>>> W_arrays_;
+	static std::vector<std::shared_ptr<super_array<gradient>>> dW_arrays_;
+	static std::vector<std::shared_ptr<super_array<fixed_real>>> t_arrays_;
+	static std::vector<std::shared_ptr<super_array<fixed_real>>> dt_arrays_;
 	static std::array<std::vector<std::shared_ptr<super_array<conserved>>>, NDIM> flux_arrays_;
 
 	volume<int> index_volume_;
@@ -46,6 +51,11 @@ class tree: public hpx::components::component_base<tree> {
 	fixed_real dt_;
 
 	std::shared_ptr<super_array<full_state>> state_ptr_;
+	std::shared_ptr<super_array<primitive>> W_ptr_;
+	std::shared_ptr<super_array<gradient>> dW_ptr_;
+	std::shared_ptr<super_array<conserved>> U_ptr_;
+	std::shared_ptr<super_array<fixed_real>> t_ptr_;
+	std::shared_ptr<super_array<fixed_real>> dt_ptr_;
 	std::array<std::shared_ptr<super_array<conserved>>, NDIM> flux_ptr_;
 
 	hpx::id_type parent_;

@@ -14,7 +14,6 @@
 
 #include <set>
 
-
 template<class T>
 class super_array {
 	std::vector<T> data_;
@@ -75,6 +74,20 @@ public:
 		return data_[i];
 	}
 
+	void set_subarray(const sub_array<T> &sub) {
+		assert(volume_.contains(sub.volume_));
+		for (auto I = sub.volume_.begin(); I != sub.volume_.end(); sub.volume_.inc_index(I)) {
+			(*this)[I] = sub[I];
+		}
+	}
+
+	sub_array<T> get_subarray(const volume<int> &vol) {
+		sub_array<T> sub(vol);
+		for (auto I = vol.begin(); I != vol.end(); vol.inc_index(I)) {
+			sub[I] = (*this)[I];
+		}
+		return sub;
+	}
 };
 
 #endif /* OCTOTIGER_SUPER_ARRAY_HPP_ */
