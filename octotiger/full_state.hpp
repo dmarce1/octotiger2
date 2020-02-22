@@ -18,7 +18,6 @@ struct full_state {
 	gradient dW;
 	fixed_real t;
 	fixed_real dt;
-	primitive dWdt() const;
 	template<class A>
 	void serialize(A &a, unsigned) {
 		a & U;

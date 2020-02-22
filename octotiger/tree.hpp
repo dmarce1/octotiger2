@@ -35,7 +35,6 @@ class tree: public hpx::components::component_base<tree> {
 	static int max_level;
 	static hpx::lcos::local::mutex mtx;
 	const static int bw;
-	static std::vector<std::shared_ptr<super_array<full_state>>> data_arrays_;
 	static std::vector<std::shared_ptr<super_array<conserved>>> U_arrays_;
 	static std::vector<std::shared_ptr<super_array<primitive>>> W_arrays_;
 	static std::vector<std::shared_ptr<super_array<gradient>>> dW_arrays_;
@@ -50,7 +49,6 @@ class tree: public hpx::components::component_base<tree> {
 	fixed_real t_;
 	fixed_real dt_;
 
-	std::shared_ptr<super_array<full_state>> state_ptr_;
 	std::shared_ptr<super_array<primitive>> W_ptr_;
 	std::shared_ptr<super_array<gradient>> dW_ptr_;
 	std::shared_ptr<super_array<conserved>> U_ptr_;
@@ -61,9 +59,9 @@ class tree: public hpx::components::component_base<tree> {
 	hpx::id_type parent_;
 	hpx::id_type self_;
 	std::vector<hpx::id_type> children_;
-	std::vector<hpx::id_type> neighbors_;
-	std::vector<node_attr> neighbor_attr_;
 	std::vector<node_attr> children_attr_;
+	std::array<hpx::id_type, NSIBLING> neighbors_;
+	std::array<node_attr, NSIBLING> neighbor_attr_;
 
 	std::atomic<int> refinement_flag;
 
@@ -148,15 +146,6 @@ public:
 
 	void compute_fluxes(fixed_real t, fixed_real dt);
 	HPX_DEFINE_COMPONENT_ACTION(tree,compute_fluxes);
-
-	std::vector<primitive> get_prim(const volume<int>&) const;
-	HPX_DEFINE_COMPONENT_ACTION(tree, get_prim);
-
-	std::vector<primitive> get_prim_from_children(const volume<int>&) const;
-	HPX_DEFINE_COMPONENT_ACTION(tree, get_prim_from_children);
-
-	std::vector<primitive> get_prim_from_neighbor(const volume<int>&) const;
-	HPX_DEFINE_COMPONENT_ACTION(tree, get_prim_from_neighbor);
 };
 
 #endif /* OCTOTIGER_TREE_HPP_ */

@@ -23,8 +23,7 @@ find_package(Boost REQUIRED)
 
 set(octotiger2_source_files
 	src/conserved.cpp
-    src/full_state.cpp
- 	src/main.cpp
+   src/main.cpp
 	src/options.cpp
 	src/primitive.cpp
     src/problems.cpp

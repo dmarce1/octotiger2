@@ -15,6 +15,10 @@
 
 class conserved;
 
+class primitive;
+
+using gradient = general_vect<primitive,NDIM>;
+
 struct primitive: public general_vect<real, NF> {
 	real &rho;
 	real &p;
@@ -26,9 +30,8 @@ struct primitive: public general_vect<real, NF> {
 	real sound_speed() const;
 	real signal_speed() const;
 	conserved to_flux(int) const;
+	primitive dWdt(const gradient dW) const;
 };
 
-
-using gradient = general_vect<primitive,NDIM>;
 
 #endif /* OCTOTIGER_PRIMITIVE_HPP_ */

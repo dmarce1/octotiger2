@@ -52,3 +52,20 @@ conserved primitive::to_flux(int dim) const {
 	F.E += p * v[dim];
 	return F;
 }
+
+primitive primitive::dWdt(const gradient dW) const {
+	primitive dwdt;
+	for (int f = 0; f < NF; f++) {
+		dwdt[f] = 0.0;
+	}
+	for (int dim = 0; dim < NDIM; dim++) {
+		for (int f = 0; f < NF; f++) {
+			dwdt[f] -= v[dim] * dW[dim][f];
+		}
+		dwdt.rho -= rho * dW[dim].v[dim];
+		dwdt.v[dim] -= dW[dim].p / rho;
+		dwdt.p -= v[dim] * dW[dim].p;
+	}
+	return dwdt;
+}
+

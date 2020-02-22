@@ -18,7 +18,6 @@ int tree::max_level;
 real tree::cfl;
 const int tree::bw = 1;
 hpx::lcos::local::mutex tree::mtx;
-std::vector<std::shared_ptr<super_array<full_state>>> tree::data_arrays_;
 std::vector<std::shared_ptr<super_array<conserved>>> tree::U_arrays_;
 std::vector<std::shared_ptr<super_array<primitive>>> tree::W_arrays_;
 std::vector<std::shared_ptr<super_array<gradient>>> tree::dW_arrays_;
@@ -45,7 +44,6 @@ void tree::initialize() {
 	{
 		std::lock_guard<hpx::lcos::local::mutex> lock(mtx);
 		if (level_ >= W_arrays_.size()) {
-			data_arrays_.resize(level_ + 1);
 			W_arrays_.resize(level_ + 1);
 			dW_arrays_.resize(level_ + 1);
 			U_arrays_.resize(level_ + 1);
@@ -56,7 +54,6 @@ void tree::initialize() {
 			}
 		}
 		if (W_arrays_[level_] == nullptr) {
-			data_arrays_[level_] = std::make_shared<super_array<full_state>>();
 			W_arrays_[level_] = std::make_shared<super_array<primitive>>();
 			dW_arrays_[level_] = std::make_shared<super_array<gradient>>();
 			U_arrays_[level_] = std::make_shared<super_array<conserved>>();
@@ -67,14 +64,12 @@ void tree::initialize() {
 			}
 		}
 	}
-	state_ptr_ = data_arrays_[level_];
 	W_ptr_ = W_arrays_[level_];
 	dW_ptr_ = dW_arrays_[level_];
 	U_ptr_ = U_arrays_[level_];
 	t_ptr_ = t_arrays_[level_];
 	dt_ptr_ = dt_arrays_[level_];
 	const auto vol = index_volume_.expand(bw);
-	state_ptr_->add_volume(vol);
 	W_ptr_->add_volume(vol);
 	dW_ptr_->add_volume(vol);
 	U_ptr_->add_volume(vol);
@@ -99,7 +94,7 @@ void tree::set_as_root() {
 	initialize();
 
 	for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
-		(*state_ptr_)[I].t = (*state_ptr_)[I].dt = fixed_real(0.0);
+		(*t_ptr_)[I] = (*dt_ptr_)[I] = fixed_real(0.0);
 	}
 
 }
@@ -118,7 +113,7 @@ void tree::find_family(hpx::id_type parent, hpx::id_type self, std::vector<hpx::
 	std::array<hpx::future<std::vector<hpx::id_type>>, NSIBLING> ncfuts;
 	std::array<std::vector<hpx::id_type>, NSIBLING> nchildren;
 	self_ = self;
-	neighbors_ = std::move(neighbors);
+	std::move(neighbors.begin(), neighbors.end(), neighbors_.begin());
 	for (int si = 0; si < NSIBLING; si++) {
 		if (neighbors_[si] != hpx::invalid_id) {
 			afuts[si] = hpx::async<get_node_attributes_action>(neighbors_[si]);
@@ -126,7 +121,7 @@ void tree::find_family(hpx::id_type parent, hpx::id_type self, std::vector<hpx::
 	}
 	if (!is_leaf()) {
 		std::array<hpx::future<node_attr>, NCHILD> acfuts;
-		for( int ci = 0; ci < NCHILD; ci++) {
+		for (int ci = 0; ci < NCHILD; ci++) {
 			acfuts[ci] = hpx::async<get_node_attributes_action>(children_[ci]);
 		}
 		for (int si = 0; si < NSIBLING; si++) {
@@ -157,7 +152,7 @@ void tree::find_family(hpx::id_type parent, hpx::id_type self, std::vector<hpx::
 			}
 			cfuts[ci] = hpx::async<find_family_action>(children_[ci], self, children_[ci], cneighbors);
 		}
-		for( int ci = 0; ci < NCHILD; ci++) {
+		for (int ci = 0; ci < NCHILD; ci++) {
 			children_attr_[ci] = acfuts[ci].get();
 		}
 		hpx::wait_all(cfuts.begin(), cfuts.end());
@@ -177,6 +172,7 @@ void tree::create_children() {
 	assert(children_.empty());
 	std::array<hpx::future<hpx::id_type>, NCHILD> futs;
 	children_.resize(NCHILD);
+	children_attr_.resize(NCHILD);
 	for (int ci = 0; ci < NCHILD; ci++) {
 		volume<int> this_vol;
 		for (int dim = 0; dim < NDIM; dim++) {
@@ -204,9 +200,9 @@ void tree::set_initial_conditions() {
 	if (is_leaf()) {
 		static const auto f = get_init_func();
 		for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
-			(*state_ptr_)[I].U = f(X(I));
-			(*state_ptr_)[I].t = 0;
-			(*state_ptr_)[I].dt = 0;
+			(*U_ptr_)[I] = f(X(I));
+			(*t_ptr_)[I] = 0;
+			(*dt_ptr_)[I] = 0;
 		}
 	} else {
 		std::array<hpx::future<void>, NCHILD> futs;
@@ -224,7 +220,11 @@ void tree::send_silo() {
 
 		for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 			silo_zone z;
-			z.state = (*state_ptr_)[I];
+			z.state.U = (*U_ptr_)[I];
+			z.state.dW = (*dW_ptr_)[I];
+			z.state.W = (*W_ptr_)[I];
+			z.state.t = (*t_ptr_)[I];
+			z.state.dt = (*dt_ptr_)[I];
 			for (int ci = 0; ci < NCHILD; ci++) {
 				for (int dim = 0; dim < NDIM; dim++) {
 					if (((ci >> dim) & 1) == 0) {
@@ -258,10 +258,10 @@ bool tree::check_for_refine(fixed_real t) {
 					auto Im = I;
 					Ip[dim]++;
 					Im[dim]--;
-					dW[dim] = ((*state_ptr_)[Ip].W - (*state_ptr_)[Im].W) * 0.5;
+					dW[dim] = ((*W_ptr_)[Ip][dim] - (*W_ptr_)[Im][dim]) * 0.5;
 				}
 				assert(rfunc != nullptr);
-				if (rfunc((*state_ptr_)[I].W, dW)) {
+				if (rfunc((*W_ptr_)[I], dW)) {
 					rc = true;
 					break;
 				}
@@ -281,23 +281,5 @@ bool tree::check_for_refine(fixed_real t) {
 		}
 	}
 	return rc;
-}
-
-std::vector<primitive> tree::get_prim(const volume<int> &volume) const {
-	std::vector<primitive> W;
-	assert(index_volume_.contains(volume));
-	for (auto I = volume.begin(); I != volume.end(); volume.inc_index(I)) {
-		W.push_back((*state_ptr_)[I].W);
-	}
-	return W;
-}
-
-std::vector<primitive> tree::get_prim_from_children(const volume<int>& vol) const {
-	std::vector<primitive> W;
-
-}
-
-std::vector<primitive> tree::get_prim_from_neighbor(const volume<int>&) const {
-
 }
 
