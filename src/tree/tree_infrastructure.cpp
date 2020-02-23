@@ -12,12 +12,12 @@
 
 HPX_REGISTER_COMPONENT(hpx::components::component<tree>, tree);
 
-int tree::inx;
-bool tree::global_time;
-int tree::max_level;
-real tree::cfl;
-const int tree::bw = 1;
-hpx::lcos::local::mutex tree::mtx;
+int tree::inx_;
+bool tree::global_time_;
+int tree::max_level_;
+real tree::cfl_;
+const int tree::bw_ = 1;
+
 std::vector<std::shared_ptr<super_array<conserved>>> tree::U_arrays_;
 std::vector<std::shared_ptr<super_array<primitive>>> tree::W_arrays_;
 std::vector<std::shared_ptr<super_array<gradient>>> tree::dW_arrays_;
@@ -27,22 +27,22 @@ std::array<std::vector<std::shared_ptr<super_array<conserved>>>, NDIM> tree::flu
 
 void tree::static_init() {
 	const auto opts = options::get();
-	inx = opts.grid_size;
-	global_time = opts.global_time;
-	cfl = opts.cfl;
-	max_level = opts.max_level;
+	inx_ = opts.grid_size;
+	global_time_ = opts.global_time;
+	cfl_ = opts.cfl;
+	max_level_ = opts.max_level;
 }
 
 void tree::initialize() {
 	for (int dim = 0; dim < NDIM; dim++) {
-		const fixed_real div = fixed_real(2) / fixed_real(inx << level_);
+		const fixed_real div = fixed_real(2) / fixed_real(inx_ << level_);
 		space_volume_.begin(dim) = fixed_real(index_volume_.begin(dim)) * div - fixed_real(1.0);
 		space_volume_.end(dim) = fixed_real(index_volume_.end(dim)) * div - fixed_real(1.0);
 	}
-	dx_ = real(space_volume_.end(0) - space_volume_.begin(0)) / inx;
+	dx_ = real(space_volume_.end(0) - space_volume_.begin(0)) / inx_;
 	dt_ = 0.0;
 	{
-		std::lock_guard<hpx::lcos::local::mutex> lock(mtx);
+		std::lock_guard<hpx::lcos::local::mutex> lock(mtx_);
 		if (level_ >= W_arrays_.size()) {
 			W_arrays_.resize(level_ + 1);
 			dW_arrays_.resize(level_ + 1);
@@ -69,7 +69,7 @@ void tree::initialize() {
 	U_ptr_ = U_arrays_[level_];
 	t_ptr_ = t_arrays_[level_];
 	dt_ptr_ = dt_arrays_[level_];
-	const auto vol = index_volume_.expand(bw);
+	const auto vol = index_volume_.expand(bw_);
 	W_ptr_->add_volume(vol);
 	dW_ptr_->add_volume(vol);
 	U_ptr_->add_volume(vol);
@@ -87,7 +87,7 @@ void tree::initialize() {
 void tree::set_as_root() {
 	for (int dim = 0; dim < NDIM; dim++) {
 		index_volume_.begin(dim) = 0;
-		index_volume_.end(dim) = inx;
+		index_volume_.end(dim) = inx_;
 	}
 	t_ = 0.0;
 	level_ = 0;
@@ -250,7 +250,7 @@ bool tree::check_for_refine(fixed_real t) {
 	bool rc = false;
 	static const auto rfunc = get_refinement_function();
 	if (is_leaf()) {
-		if (max_level > level_) {
+		if (max_level_ > level_) {
 			for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 				gradient dW;
 				for (int dim = 0; dim < NDIM; dim++) {
@@ -281,5 +281,27 @@ bool tree::check_for_refine(fixed_real t) {
 		}
 	}
 	return rc;
+}
+
+sub_array<primitive> tree::get_restricted_prim(const volume<int> &vol) const {
+	return W_ptr_->get_restricted_subarray(vol);
+}
+
+std::vector<sub_array<primitive>> tree::get_prim_from_niece(volume<int> vol) const {
+	std::vector<hpx::future<sub_array<primitive>>> futs(NCHILD / 2);
+	std::vector<sub_array<primitive>> W(NCHILD / 2);
+	vol = vol.double_();
+	int index = 0;
+	for (int ci = 0; ci < NCHILD; ci++) {
+		if (vol.intersects(children_attr_[ci].index_volume)) {
+			const auto ivol = vol.intersection(children_attr_[ci].index_volume);
+			futs[index] = hpx::async<get_restricted_prim_action>(children_[ci], ivol);
+			index++;
+		}
+	}
+	for (index = 0; index < NCHILD / 2; index++) {
+		W[index] = futs[index].get();
+	}
+	return W;
 }
 

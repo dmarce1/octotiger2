@@ -29,12 +29,12 @@ struct node_attr {
 
 class tree: public hpx::components::component_base<tree> {
 
-	static int inx;
-	static bool global_time;
-	static real cfl;
-	static int max_level;
-	static hpx::lcos::local::mutex mtx;
-	const static int bw;
+	static int inx_;
+	static bool global_time_;
+	static real cfl_;
+	static int max_level_;
+	const static int bw_;
+
 	static std::vector<std::shared_ptr<super_array<conserved>>> U_arrays_;
 	static std::vector<std::shared_ptr<super_array<primitive>>> W_arrays_;
 	static std::vector<std::shared_ptr<super_array<gradient>>> dW_arrays_;
@@ -146,6 +146,12 @@ public:
 
 	void compute_fluxes(fixed_real t, fixed_real dt);
 	HPX_DEFINE_COMPONENT_ACTION(tree,compute_fluxes);
+
+	std::vector<sub_array<primitive>> get_prim_from_niece(volume<int>) const;
+	HPX_DEFINE_COMPONENT_ACTION(tree, get_prim_from_niece);
+
+	sub_array<primitive> get_restricted_prim(const volume<int>&) const;
+	HPX_DEFINE_COMPONENT_ACTION(tree, get_restricted_prim);
 };
 
 #endif /* OCTOTIGER_TREE_HPP_ */

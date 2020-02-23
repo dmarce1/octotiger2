@@ -88,6 +88,24 @@ public:
 		}
 		return sub;
 	}
+
+	sub_array<T> get_restricted_subarray(const volume<int> &vol) {
+		const auto rvol = vol.half();
+		sub_array<T> R(rvol);
+		for (auto I = rvol.begin(); I != rvol.end(); rvol.inc_index(I)) {
+			R[I] = (*this)[I * 2] / NCHILD;
+			for (int ci = 1; ci < NCHILD; ci++) {
+				auto J = I * 2;
+				for (int dim = 0; dim < NDIM; dim++) {
+					if (((ci >> dim) & 1) == 1) {
+						J[dim]++;
+					}
+				}
+				R[I] = R[I] + (*this)[J] / NCHILD;
+			}
+		}
+		return R;
+	}
 };
 
 #endif /* OCTOTIGER_SUPER_ARRAY_HPP_ */

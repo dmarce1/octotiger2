@@ -247,7 +247,7 @@ public:
 		return s;
 	}
 
-	bool intersects(const volume<T> &other) {
+	bool intersects(const volume<T> &other) const {
 		bool rc = true;
 		for (int dim = 0; dim < NDIM; dim++) {
 			if (end(dim) < other.begin(dim)) {
@@ -258,7 +258,8 @@ public:
 		return rc;
 	}
 
-	volume<T> intersection(const volume<T> &other) {
+	volume<T> intersection(const volume<T> &other) const {
+		using namespace std;
 		volume<T> I;
 		for (int dim = 0; dim < NDIM; dim++) {
 			I.begin(dim) = max(begin(dim), other.begin(dim));

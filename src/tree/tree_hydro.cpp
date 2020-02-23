@@ -40,7 +40,7 @@ bool tree::adjust_dt(fixed_real t) {
 
 void tree::con_to_prim(fixed_real t, fixed_real dt) {
 	if (is_leaf()) {
-		if (global_time || (t + dt == t_ + dt_)) {
+		if (global_time_ || (t + dt == t_ + dt_)) {
 			t_ = t + dt;
 			for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 				primitive &W = (*W_ptr_)[I];
@@ -60,7 +60,7 @@ void tree::con_to_prim(fixed_real t, fixed_real dt) {
 
 void tree::gradients(fixed_real t) {
 	if (is_leaf()) {
-		if (global_time || t == t_) {
+		if (global_time_ || t == t_) {
 
 			for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 				const primitive W = (*W_ptr_)[I];
@@ -95,12 +95,12 @@ void tree::load_times() {
 
 fixed_real tree::timestep(fixed_real t) {
 	if (is_leaf()) {
-		if (t == t_ || global_time) {
+		if (t == t_ || global_time_) {
 			dt_ = fixed_real::max();
 			for (auto I = index_volume_.begin(); I != index_volume_.end(); index_volume_.inc_index(I)) {
 				primitive W = (*W_ptr_)[I];
 				const auto vsig = W.signal_speed();
-				fixed_real dt = real(dx_) / vsig * cfl;
+				fixed_real dt = real(dx_) / vsig * cfl_;
 				dt_ = min(dt_, dt);
 			}
 			dt_ = dt_.nearest_log2();
@@ -138,8 +138,8 @@ void tree::physical_bc_primitive() {
 			}
 			if (space_volume_.end(dim) == fixed_real(1.0)) {
 				volume<int> bc_vol = index_volume_;
-				bc_vol.begin(dim) = inx << level_;
-				bc_vol.end(dim) = (inx << level_) + 1;
+				bc_vol.begin(dim) = inx_ << level_;
+				bc_vol.end(dim) = (inx_ << level_) + 1;
 				for (auto I = bc_vol.begin(); I != bc_vol.end(); bc_vol.inc_index((I))) {
 					auto Im = I;
 					Im[dim]--;
@@ -179,8 +179,8 @@ void tree::physical_bc_gradient() {
 			}
 			if (space_volume_.end(dim) == fixed_real(1.0)) {
 				volume<int> bc_vol = index_volume_;
-				bc_vol.begin(dim) = inx << level_;
-				bc_vol.end(dim) = (inx << level_) + 1;
+				bc_vol.begin(dim) = inx_ << level_;
+				bc_vol.end(dim) = (inx_ << level_) + 1;
 				for (auto I = bc_vol.begin(); I != bc_vol.end(); bc_vol.inc_index((I))) {
 					auto Im = I;
 					Im[dim]--;
@@ -217,8 +217,8 @@ void tree::update_con(fixed_real t, fixed_real dt) {
 				const auto& Ldt = (*dt_ptr_)[IL];
 				const auto& Rt = (*t_ptr_)[IR];
 				const auto& Rdt = (*dt_ptr_)[IR];
-				if ((Lt + Ldt == t + dt) || (Rt + Rdt == t + dt) || global_time) {
-					const auto this_dt = global_time ? dt : min(Ldt, Rdt);
+				if ((Lt + Ldt == t + dt) || (Rt + Rdt == t + dt) || global_time_) {
+					const auto this_dt = global_time_ ? dt : min(Ldt, Rdt);
 					const auto& F = (*flux_ptr_[dim])[I];
 					const auto dU = F * (real(this_dt) / real(dx_));
 					if (index_volume_.contains(IR)) {
@@ -257,8 +257,8 @@ void tree::compute_fluxes(fixed_real t, fixed_real dt) {
 				const auto& Ldt = (*dt_ptr_)[IL];
 				const auto& Rt = (*t_ptr_)[IR];
 				const auto& Rdt = (*dt_ptr_)[IR];
-				if ((Lt + Ldt == t + dt) || (Rt + Rdt == t + dt) || global_time) {
-					const auto this_dt = global_time ? dt : min(Ldt, Rdt);
+				if ((Lt + Ldt == t + dt) || (Rt + Rdt == t + dt) || global_time_) {
+					const auto this_dt = global_time_ ? dt : min(Ldt, Rdt);
 					WR = (*W_ptr_)[IR];
 					WL = (*W_ptr_)[IL];
 					WR = WR - dWR[dim] * 0.5;

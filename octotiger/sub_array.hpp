@@ -25,6 +25,9 @@ class sub_array {
 		data_.resize(volume_.size());
 	}
 public:
+	sub_array() {
+	}
+
 	sub_array(const volume<int> volume) :
 			volume_(volume) {
 		initialize();
@@ -41,8 +44,14 @@ public:
 		const auto i = volume_.index(I);
 		return data_[i];
 	}
-	friend class super_array<T>;
-};
+	friend class super_array<T> ;
 
+	template<class Arc>
+	void serialize(Arc&& arc, unsigned) {
+		arc & volume_;
+		initialize();
+		arc & data_;
+	}
+};
 
 #endif /* OCTOTIGER_SUB_ARRAY_HPP_ */
