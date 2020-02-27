@@ -93,7 +93,7 @@ public:
 		const auto rvol = vol.half();
 		sub_array<T> R(rvol);
 		for (auto I = rvol.begin(); I != rvol.end(); rvol.inc_index(I)) {
-			R[I] = (*this)[I * 2] / NCHILD;
+			R[I] = (*this)[I * 2] / real(NCHILD);
 			for (int ci = 1; ci < NCHILD; ci++) {
 				auto J = I * 2;
 				for (int dim = 0; dim < NDIM; dim++) {
@@ -101,11 +101,21 @@ public:
 						J[dim]++;
 					}
 				}
-				R[I] = R[I] + (*this)[J] / NCHILD;
+				R[I] = R[I] + (*this)[J] / real(NCHILD);
 			}
 		}
 		return R;
 	}
+
+	sub_array<T> get_prolonged_subarray(const volume<int> &vol) {
+		const auto pvol = vol.double_();
+		sub_array<T> P(pvol);
+		for (auto I = pvol.begin(); I != pvol.end(); pvol.inc_index(I)) {
+			P[I] = (*this)[I / 2];
+		}
+		return P;
+	}
+
 };
 
 #endif /* OCTOTIGER_SUPER_ARRAY_HPP_ */

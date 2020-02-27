@@ -124,7 +124,7 @@ void tree::physical_bc_primitive() {
 	if (is_leaf()) {
 
 		for (int dim = 0; dim < NDIM; dim++) {
-			if (space_volume_.begin(dim) == fixed_real(-1.0)) {
+			if (is_physical(2 * dim + 0)) {
 				volume<int> bc_vol = index_volume_;
 				bc_vol.begin(dim) = -1;
 				bc_vol.end(dim) = 0;
@@ -136,7 +136,7 @@ void tree::physical_bc_primitive() {
 					W.v[dim] = min(W.v[dim], real(0.0));
 				}
 			}
-			if (space_volume_.end(dim) == fixed_real(1.0)) {
+			if (is_physical(2 * dim + 1)) {
 				volume<int> bc_vol = index_volume_;
 				bc_vol.begin(dim) = inx_ << level_;
 				bc_vol.end(dim) = (inx_ << level_) + 1;
@@ -163,7 +163,7 @@ void tree::physical_bc_gradient() {
 	if (is_leaf()) {
 
 		for (int dim = 0; dim < NDIM; dim++) {
-			if (space_volume_.begin(dim) == fixed_real(-1.0)) {
+			if (is_physical(2 * dim + 0)) {
 				volume<int> bc_vol = index_volume_;
 				bc_vol.begin(dim) = -1;
 				bc_vol.end(dim) = 0;
@@ -177,7 +177,7 @@ void tree::physical_bc_gradient() {
 					(*dt_ptr_)[I] = (*dt_ptr_)[Ip];
 				}
 			}
-			if (space_volume_.end(dim) == fixed_real(1.0)) {
+			if (is_physical(2 * dim + 1)) {
 				volume<int> bc_vol = index_volume_;
 				bc_vol.begin(dim) = inx_ << level_;
 				bc_vol.end(dim) = (inx_ << level_) + 1;
@@ -253,10 +253,10 @@ void tree::compute_fluxes(fixed_real t, fixed_real dt) {
 				IL[dim]--;
 				const auto &dWR = (*dW_ptr_)[IR];
 				const auto &dWL = (*dW_ptr_)[IL];
-				const auto& Lt = (*t_ptr_)[IL];
-				const auto& Ldt = (*dt_ptr_)[IL];
-				const auto& Rt = (*t_ptr_)[IR];
-				const auto& Rdt = (*dt_ptr_)[IR];
+				const auto &Lt = (*t_ptr_)[IL];
+				const auto &Ldt = (*dt_ptr_)[IL];
+				const auto &Rt = (*t_ptr_)[IR];
+				const auto &Rdt = (*dt_ptr_)[IR];
 				if ((Lt + Ldt == t + dt) || (Rt + Rdt == t + dt) || global_time_) {
 					const auto this_dt = global_time_ ? dt : min(Ldt, Rdt);
 					WR = (*W_ptr_)[IR];

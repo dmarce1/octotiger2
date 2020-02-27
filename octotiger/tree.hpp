@@ -90,6 +90,27 @@ public:
 		return x;
 	}
 
+	inline bool is_physical(int face) const {
+		const auto dim = face / 2;
+		if (face % 2 == 0) {
+			return space_volume_.begin(dim) == fixed_real(-1.0);
+		} else {
+			return space_volume_.end(dim) == fixed_real(+1.0);
+		}
+	}
+
+	inline bool is_fine_amr(int face) {
+		return (is_leaf() && neighbors_[face] == hpx::invalid_id && !is_physical(face));
+	}
+
+	inline bool is_coarse_amr(int face) {
+		if (neighbors_[face] != hpx::invalid_id) {
+			return (is_leaf() && !neighbor_attr_[face].leaf && !is_physical(face));
+		} else {
+			return false;
+		}
+	}
+
 	void load_times();
 
 	void set_as_root();
@@ -126,6 +147,12 @@ public:
 	void physical_bc_gradient();
 	HPX_DEFINE_COMPONENT_ACTION(tree,physical_bc_gradient);
 
+	void amr_bc_primitive();
+	HPX_DEFINE_COMPONENT_ACTION(tree,amr_bc_primitive);
+
+	void amr_bc_gradient();
+	HPX_DEFINE_COMPONENT_ACTION(tree,amr_bc_gradient);
+
 	void update_con(fixed_real, fixed_real);
 	HPX_DEFINE_COMPONENT_ACTION(tree, update_con);
 
@@ -152,6 +179,25 @@ public:
 
 	sub_array<primitive> get_restricted_prim(const volume<int>&) const;
 	HPX_DEFINE_COMPONENT_ACTION(tree, get_restricted_prim);
+
+	sub_array<primitive> get_prim_from_aunt(volume<int>) const;
+	HPX_DEFINE_COMPONENT_ACTION(tree, get_prim_from_aunt);
+
+	sub_array<primitive> get_prolonged_prim(const volume<int>&) const;
+	HPX_DEFINE_COMPONENT_ACTION(tree, get_prolonged_prim);
+
+	std::vector<sub_array<gradient>> get_gradient_from_niece(volume<int>) const;
+	HPX_DEFINE_COMPONENT_ACTION(tree, get_gradient_from_niece);
+
+	sub_array<gradient> get_restricted_gradient(const volume<int>&) const;
+	HPX_DEFINE_COMPONENT_ACTION(tree, get_restricted_gradient);
+
+	sub_array<gradient> get_gradient_from_aunt(volume<int>) const;
+	HPX_DEFINE_COMPONENT_ACTION(tree, get_gradient_from_aunt);
+
+	sub_array<gradient> get_prolonged_gradient(const volume<int>&) const;
+	HPX_DEFINE_COMPONENT_ACTION(tree, get_prolonged_gradient);
+
 };
 
 #endif /* OCTOTIGER_TREE_HPP_ */

@@ -27,8 +27,10 @@ public:
 	general_vect operator-() const;
 	general_vect operator-(const general_vect &other) const;
 	general_vect operator+(const general_vect &other) const;
-	general_vect operator*(T r) const;
-	general_vect operator/(T r) const;
+	general_vect operator*(real r) const;
+	general_vect operator/(real r) const;
+	general_vect operator*(int r) const;
+	general_vect operator/(int r) const;
 	bool operator<(const general_vect &other) const;
 	bool operator<=(const general_vect &other) const;
 	bool operator>(const general_vect &other) const;
@@ -135,7 +137,7 @@ inline general_vect<T, N> general_vect<T, N>::operator+(const general_vect<T, N>
 }
 
 template<class T, int N>
-inline general_vect<T, N> general_vect<T, N>::operator*(T r) const {
+inline general_vect<T, N> general_vect<T, N>::operator*(real r) const {
 	general_vect<T, N> result;
 	for (int dim = 0; dim < N; dim++) {
 		result[dim] = v[dim] * r;
@@ -144,7 +146,25 @@ inline general_vect<T, N> general_vect<T, N>::operator*(T r) const {
 }
 
 template<class T, int N>
-inline general_vect<T, N> general_vect<T, N>::operator/(T r) const {
+inline general_vect<T, N> general_vect<T, N>::operator/(real r) const {
+	general_vect<T, N> result;
+	for (int dim = 0; dim < N; dim++) {
+		result[dim] = v[dim] / r;
+	}
+	return result;
+}
+
+template<class T, int N>
+inline general_vect<T, N> general_vect<T, N>::operator*(int r) const {
+	general_vect<T, N> result;
+	for (int dim = 0; dim < N; dim++) {
+		result[dim] = v[dim] * r;
+	}
+	return result;
+}
+
+template<class T, int N>
+inline general_vect<T, N> general_vect<T, N>::operator/(int r) const {
 	general_vect<T, N> result;
 	for (int dim = 0; dim < N; dim++) {
 		result[dim] = v[dim] / r;
