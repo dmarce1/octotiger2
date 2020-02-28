@@ -20,8 +20,10 @@ int hpx_main(int argc, char *argv[]) {
 		tree::find_family_action()(root, hpx::invalid_id, root, std::vector<hpx::id_type>(NSIBLING, hpx::invalid_id));
 		tree::con_to_prim_action()(root, 0.0, 0.0);
 		tree::physical_bc_primitive_action()(root);
+		tree::amr_bc_primitive_action()(root);
 	} while (tree::check_for_refine_action()(root, 0.0));
 	tree::physical_bc_primitive_action()(root);
+	tree::amr_bc_primitive_action()(root);
 	tree::gradients_action()(root, 0.0);
 	silo_begin();
 	tree::send_silo_action()(root);
@@ -38,12 +40,14 @@ int hpx_main(int argc, char *argv[]) {
 		}
 		printf("%i %e %e\n", step, (double) t, (double) dt);
 		tree::physical_bc_gradient_action()(root);
+		tree::amr_bc_gradient_action()(root);
 		tree::compute_fluxes_action()(root, t, dt);
 		tree::update_con_action()(root, t, dt);
 		tree::con_to_prim_action()(root, t, dt);
 		t += dt;
 		step++;
 		tree::physical_bc_primitive_action()(root);
+		tree::amr_bc_primitive_action()(root);
 		tree::gradients_action()(root, t);
 		const double t0 = t;
 		const double dt0 = dt;

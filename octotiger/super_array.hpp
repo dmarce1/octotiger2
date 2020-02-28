@@ -111,7 +111,8 @@ public:
 		const auto pvol = vol.double_();
 		sub_array<T> P(pvol);
 		for (auto I = pvol.begin(); I != pvol.end(); pvol.inc_index(I)) {
-			P[I] = (*this)[I / 2];
+			const auto J = I / 2;
+			P[I] = (*this)[J];
 		}
 		return P;
 	}

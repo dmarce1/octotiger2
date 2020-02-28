@@ -293,8 +293,9 @@ std::vector<sub_array<primitive>> tree::get_prim_from_niece(volume<int> vol) con
 	vol = vol.double_();
 	int index = 0;
 	for (int ci = 0; ci < NCHILD; ci++) {
-		if (vol.intersects(children_attr_[ci].index_volume)) {
-			const auto ivol = vol.intersection(children_attr_[ci].index_volume);
+		const auto &cvol = children_attr_[ci].index_volume;
+		const auto ivol = vol.intersection(cvol);
+		if (ivol != volume<int>()) {
 			futs[index] = hpx::async<get_restricted_prim_action>(children_[ci], ivol);
 			index++;
 		}
@@ -306,11 +307,17 @@ std::vector<sub_array<primitive>> tree::get_prim_from_niece(volume<int> vol) con
 }
 
 sub_array<primitive> tree::get_prim_from_aunt(volume<int> vol) const {
+
+	/**** BUG HERE ****/
+
 	vol = vol.half();
+
+
 	hpx::future<sub_array<primitive>> fut;
 	for (int si = 0; si < NSIBLING; si++) {
-		if (vol.intersects(neighbor_attr_[si].index_volume)) {
-			const auto ivol = vol.intersection(neighbor_attr_[si].index_volume);
+		const auto &avol = neighbor_attr_[si].index_volume;
+		const auto ivol = vol.intersection(avol);
+		if (ivol != volume<int>()) {
 			fut = hpx::async<get_prolonged_prim_action>(neighbors_[si], ivol);
 			break;
 		}
@@ -332,8 +339,8 @@ std::vector<sub_array<gradient>> tree::get_gradient_from_niece(volume<int> vol) 
 	vol = vol.double_();
 	int index = 0;
 	for (int ci = 0; ci < NCHILD; ci++) {
-		if (vol.intersects(children_attr_[ci].index_volume)) {
-			const auto ivol = vol.intersection(children_attr_[ci].index_volume);
+		const auto ivol = vol.intersection(children_attr_[ci].index_volume);
+		if (ivol != volume<int>()) {
 			futs[index] = hpx::async<get_restricted_gradient_action>(children_[ci], ivol);
 			index++;
 		}
@@ -348,8 +355,8 @@ sub_array<gradient> tree::get_gradient_from_aunt(volume<int> vol) const {
 	vol = vol.half();
 	hpx::future<sub_array<gradient>> fut;
 	for (int si = 0; si < NSIBLING; si++) {
-		if (vol.intersects(neighbor_attr_[si].index_volume)) {
-			const auto ivol = vol.intersection(neighbor_attr_[si].index_volume);
+		const auto ivol = vol.intersection(neighbor_attr_[si].index_volume);
+		if (ivol != volume<int>()) {
 			fut = hpx::async<get_prolonged_gradient_action>(neighbors_[si], ivol);
 			break;
 		}
@@ -364,8 +371,11 @@ sub_array<gradient> tree::get_prolonged_gradient(const volume<int> &vol) const {
 void tree::amr_bc_primitive() {
 	if (is_leaf()) {
 		for (int si = 0; si < NSIBLING; si++) {
-			if (is_fine_amr(si)) {
-				auto vol = index_volume_;
+			const bool isfa = is_fine_amr(si);
+			const bool isca = is_coarse_amr(si);
+			decltype(index_volume_) vol;
+			if (isfa || isca) {
+				vol = index_volume_;
 				const auto dim = si / 2;
 				if (si % 2 == 0) {
 					vol.end(dim) = vol.begin(dim);
@@ -374,21 +384,14 @@ void tree::amr_bc_primitive() {
 					vol.begin(dim) = vol.end(dim);
 					vol.end(dim) = vol.end(dim) + 1;
 				}
+			}
+			if (isfa) {
 				auto W = get_prim_from_aunt_action()(parent_, vol);
-				W_ptr_->set_subarray(W);
-			} else if (is_coarse_amr(si)) {
-				auto vol = index_volume_;
-				const auto dim = si / 2;
-				if (si % 2 == 0) {
-					vol.end(dim) = vol.begin(dim);
-					vol.begin(dim) = vol.begin(dim) - 1;
-				} else {
-					vol.begin(dim) = vol.end(dim);
-					vol.end(dim) = vol.end(dim) + 1;
-				}
+				W_ptr_->set_subarray(std::move(W));
+			} else if (isca) {
 				auto Ws = get_prim_from_niece_action()(neighbors_[si], vol);
-				for( const auto& W : Ws) {
-					W_ptr_->set_subarray(W);
+				for (auto &W : Ws) {
+					W_ptr_->set_subarray(std::move(W));
 				}
 			}
 		}
@@ -403,7 +406,31 @@ void tree::amr_bc_primitive() {
 
 void tree::amr_bc_gradient() {
 	if (is_leaf()) {
-		/**********/
+		for (int si = 0; si < NSIBLING; si++) {
+			const bool isfa = is_fine_amr(si);
+			const bool isca = is_coarse_amr(si);
+			decltype(index_volume_) vol;
+			if (isfa || isca) {
+				vol = index_volume_;
+				const auto dim = si / 2;
+				if (si % 2 == 0) {
+					vol.end(dim) = vol.begin(dim);
+					vol.begin(dim) = vol.begin(dim) - 1;
+				} else {
+					vol.begin(dim) = vol.end(dim);
+					vol.end(dim) = vol.end(dim) + 1;
+				}
+			}
+			if (isfa) {
+				auto dW = get_gradient_from_aunt_action()(parent_, vol);
+				dW_ptr_->set_subarray(std::move(dW));
+			} else if (isca) {
+				auto dWs = get_gradient_from_niece_action()(neighbors_[si], vol);
+				for (auto &dW : dWs) {
+					dW_ptr_->set_subarray(std::move(dW));
+				}
+			}
+		}
 	} else {
 		std::array<hpx::future<void>, NCHILD> futs;
 		for (int ci = 0; ci < NCHILD; ci++) {
