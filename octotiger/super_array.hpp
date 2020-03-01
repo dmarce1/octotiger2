@@ -107,8 +107,7 @@ public:
 		return R;
 	}
 
-	sub_array<T> get_prolonged_subarray(const volume<int> &vol) {
-		const auto pvol = vol.double_();
+	sub_array<T> get_prolonged_subarray(const volume<int> &pvol) {
 		sub_array<T> P(pvol);
 		for (auto I = pvol.begin(); I != pvol.end(); pvol.inc_index(I)) {
 			const auto J = I / 2;

@@ -32,7 +32,7 @@ public:
 
 	volume<T> double_() const {
 		volume<T> v;
-		for( int dim = 0; dim < NDIM; dim++) {
+		for (int dim = 0; dim < NDIM; dim++) {
 			v.begin_[dim] = 2 * begin_[dim];
 			v.end_[dim] = 2 * end_[dim];
 		}
@@ -41,13 +41,13 @@ public:
 
 	volume<T> half() const {
 		volume<T> v;
-		for( int dim = 0; dim < NDIM; dim++) {
+		for (int dim = 0; dim < NDIM; dim++) {
 			v.begin_[dim] = begin_[dim] / 2;
-			if( begin_[dim] % 2 < 0) {
+			if (begin_[dim] % 2 < 0) {
 				v.begin_[dim]--;
 			}
 			v.end_[dim] = end_[dim] / 2;
-			if( end_[dim] % 2 < 0) {
+			if (end_[dim] % 2 < 0) {
 				v.end_[dim]--;
 			}
 		}
@@ -161,19 +161,11 @@ public:
 		return end_;
 	}
 
-	bool contains(const volume<T> &other) const {
-		bool rc = true;
-		for (int dim = 0; dim < NDIM; dim++) {
-			if (!contains(other.begin_[dim])) {
-				rc = false;
-				break;
-			}
-			if (!contains(other.end_[dim])) {
-				rc = false;
-				break;
-			}
+	bool contains(volume<T> other) const {
+		for( int dim = 0; dim < NDIM; dim++) {
+			other.end_[dim]--;
 		}
-		return rc;
+		return contains(other.begin_) && contains(other.end_);
 	}
 
 	bool contains(const general_vect<T, NDIM> &pt) const {

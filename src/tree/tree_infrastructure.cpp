@@ -307,22 +307,16 @@ std::vector<sub_array<primitive>> tree::get_prim_from_niece(volume<int> vol) con
 }
 
 sub_array<primitive> tree::get_prim_from_aunt(volume<int> vol) const {
-
-	/**** BUG HERE ****/
-
-	vol = vol.half();
-
-
-	hpx::future<sub_array<primitive>> fut;
+	sub_array<primitive> W;
 	for (int si = 0; si < NSIBLING; si++) {
-		const auto &avol = neighbor_attr_[si].index_volume;
+		const auto &avol = neighbor_attr_[si].index_volume.double_();
 		const auto ivol = vol.intersection(avol);
 		if (ivol != volume<int>()) {
-			fut = hpx::async<get_prolonged_prim_action>(neighbors_[si], ivol);
+			W = get_prolonged_prim_action()(neighbors_[si], ivol);
 			break;
 		}
 	}
-	return fut.get();
+	return W;
 }
 
 sub_array<primitive> tree::get_prolonged_prim(const volume<int> &vol) const {
@@ -352,16 +346,16 @@ std::vector<sub_array<gradient>> tree::get_gradient_from_niece(volume<int> vol) 
 }
 
 sub_array<gradient> tree::get_gradient_from_aunt(volume<int> vol) const {
-	vol = vol.half();
-	hpx::future<sub_array<gradient>> fut;
+	sub_array<gradient> dW;
 	for (int si = 0; si < NSIBLING; si++) {
-		const auto ivol = vol.intersection(neighbor_attr_[si].index_volume);
+		const auto &avol = neighbor_attr_[si].index_volume.double_();
+		const auto ivol = vol.intersection(avol);
 		if (ivol != volume<int>()) {
-			fut = hpx::async<get_prolonged_gradient_action>(neighbors_[si], ivol);
+			dW = get_prolonged_gradient_action()(neighbors_[si], ivol);
 			break;
 		}
 	}
-	return fut.get();
+	return dW;
 }
 
 sub_array<gradient> tree::get_prolonged_gradient(const volume<int> &vol) const {
